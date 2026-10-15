@@ -320,7 +320,7 @@ footer{margin-top:28px;font-size:12.5px;color:var(--muted);border-top:1px solid 
           </div>
           <div class="sgroup">
             <span class="label">Specificity</span>
-            <label class="check"><input id="s_usePB" type="checkbox"> <span>Run NCBI Primer-BLAST (genome-wide check, 1–6 min)</span></label>
+            <label class="check"><input id="s_usePB" type="checkbox"> <span>Run NCBI Primer-BLAST (genome-wide check, 1–10 min)</span></label>
             <label class="field"><span>Database</span>
               <select id="s_pbDb">
                 <option value="PRIMERDB/genome_selected_species">Human genome, primary assembly</option>
@@ -482,6 +482,17 @@ footer{margin-top:28px;font-size:12.5px;color:var(--muted);border-top:1px solid 
     <details id="faq-fallback">
       <summary>What happens when gnomAD or Ensembl is down?</summary>
       <p>PrimerScope falls back to the UCSC Genome Browser. RepeatMasker from UCSC replaces the Ensembl repeats. dbSNP 155 common variants replace gnomAD. That fallback only lists variants with a frequency of at least 1% in at least one population project, so rarer variants above your threshold are not screened, and a message says so. If both sources fail, the SNP step shows "Unavailable".</p>
+    </details>
+
+    <details id="faq-speed">
+      <summary>Why does Primer-BLAST sometimes take 5–10 minutes?</summary>
+      <p>Primer-BLAST runs on NCBI's shared servers, and its speed depends mostly on how busy they are. US working hours are slowest. NCBI also slows down addresses that send many jobs. PrimerScope keeps its footprint small:</p>
+      <ul>
+        <li>It checks a running job at most once a minute, as NCBI asks.</li>
+        <li>Running the same design again in the same tab (same variant and settings) reuses the earlier result at once, or waits for the identical job that is still running, instead of submitting a new one. The step then shows "reused".</li>
+        <li>"Stop waiting" only stops the page from waiting. The job keeps running at NCBI, and "Try again" picks it up where it is.</li>
+      </ul>
+      <p>Changing any setting or the variant makes a new job. Avoid pressing Design repeatedly while one is running.</p>
     </details>
 
     <details id="faq-read">
@@ -1367,7 +1378,7 @@ PS.pbRun = async function (fields, { v, T, onStatus = () => {}, signal = null, m
       let status = 'Running';
       if (st) { const m = /Status\s+(\w+)/.exec(textOf(st)); if (m) status = m[1]; }
       onStatus({ phase: guided ? 'search' : 'submitted', status, elapsed: Math.round((Date.now() - t0) / 1000), jobUrl });
-      const wait = Math.min(30, Math.max(10, +refresh[1])) * 1000;
+      const wait = Math.min(120, Math.max(60, +refresh[1])) * 1000;   // NCBI asks for at most one status check per job per minute
       await PS.sleep(wait);
       html = await req(jobUrl, { as: 'text', label: 'Primer-BLAST status', signal, retries: 3, timeout: 60000 });
       continue;
@@ -1765,6 +1776,38 @@ function vvPill(v) {
   return '';
 }
 
+/* ---------------- Primer-BLAST jobs: one per identical request, reused for this browser session ----------------
+   A job is keyed by every field sent to NCBI (template, zones, settings, primers). Re-running the same design, or
+   pressing "Try again" after "Stop waiting", attaches to the job already running instead of submitting another one,
+   and a finished result is reused until the tab is closed. Fewer jobs from one address also keeps NCBI from throttling it. */
+const PB_JOBS = new Map();
+function pbKey(fields) {
+  const s = JSON.stringify(fields); let h = 2166136261;
+  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
+  return `primerscope.pb.${(h >>> 0).toString(36)}.${s.length}`;
+}
+function pbShared(fields, opts, signal, onStatus) {
+  const key = pbKey(fields);
+  let job = PB_JOBS.get(key);
+  if (!job) {
+    let stored = null; try { stored = JSON.parse(sessionStorage.getItem(key) || 'null'); } catch (e) {}
+    job = { listeners: new Set(), done: !!stored };
+    job.promise = stored ? Promise.resolve(stored) : PS.pbRun(fields, Object.assign({}, opts, { onStatus: st => { job.last = st; job.listeners.forEach(f => f(st)); } }))
+      .then(res => { job.done = true; try { sessionStorage.setItem(key, JSON.stringify(res)); } catch (e) {} return res; },
+            err => { PB_JOBS.delete(key); throw err; });
+    PB_JOBS.set(key, job);
+    if (!stored) addLog('Primer-BLAST: new job submitted');
+  } else addLog(job.done ? 'Primer-BLAST: reusing the result of an identical earlier job' : 'Primer-BLAST: attached to the identical job already running');
+  const reused = job.done;
+  if (onStatus) { job.listeners.add(onStatus); if (job.last) onStatus(job.last); }
+  return new Promise((ok, no) => {
+    const leave = () => { if (onStatus) job.listeners.delete(onStatus); };
+    const abort = () => { leave(); no(new Error('Cancelled')); };   // stop waiting here; the NCBI job carries on and is kept
+    if (signal) { if (signal.aborted) return abort(); signal.addEventListener('abort', abort, { once: true }); }
+    job.promise.then(res => { leave(); ok(Object.assign(structuredClone(res), { reused })); }, err => { leave(); no(err); });
+  });
+}
+
 /* ---------------- Primer-BLAST ---------------- */
 async function runPB(ctl, id) {
   const alive = () => current && current.id === id;
@@ -1773,17 +1816,15 @@ async function runPB(ctl, id) {
   setStep('pb', 'run', 'Submitting…'); renderPairs();
   const tick = setInterval(() => { if (!alive() || state.pb.status !== 'run') return clearInterval(tick); updatePBClock(); }, 1000);
   try {
-    const res = await PS.pbRun(fields, {
-      v: state.v, T: state.T, signal: ctl.signal,
-      onStatus: s => { if (!alive()) return; state.pb.jobUrl = s.jobUrl; state.pb.phase = s.status; updatePBClock(true); }
-    });
+    const res = await pbShared(fields, { v: state.v, T: state.T }, ctl.signal,
+      s => { if (!alive()) return; state.pb.jobUrl = s.jobUrl; state.pb.phase = s.status; updatePBClock(true); });
     if (!alive()) return;
     for (const p of res.pairs) { PS.annotatePair(p, state.T, state.v, state.ctx, S); try { p.m = await PS.checkPair(p.f, p.r, S); } catch (e) { p.m = null; } libFlags(p); }
     state.pb = Object.assign(state.pb, { status: 'done', res });
     const byKey = new Map(res.pairs.map(p => [p.f + '|' + p.r, p]));
     state.local.pairs.forEach(p => { const q = byKey.get(p.f + '|' + p.r); if (q) p.pbMatch = q; });
     const nSpec = res.pairs.filter(p => !p.offTargets.some(o => o.risk === 'high')).length;
-    setStep('pb', res.pairs.length ? (nSpec ? 'done' : 'warn') : 'warn', res.pairs.length ? `${res.pairs.length} pairs, ${nSpec} without likely off-targets · ${fmtDur(res.elapsed)}` : 'No pairs');
+    setStep('pb', res.pairs.length ? (nSpec ? 'done' : 'warn') : 'warn', res.pairs.length ? `${res.pairs.length} pairs, ${nSpec} without likely off-targets · ${res.reused ? 'reused' : fmtDur(res.elapsed)}` : 'No pairs');
     if (res.info) msg(nSpec ? 'info' : 'warn', `<b>Primer-BLAST:</b> ${esc(res.info)}`);
     if (res.pairs.length && !nSpec) msg('warn', `<b>No pair is specific in this window.</b> Every pair has a likely off-target product (listed under each pair). For a gene with a close paralog or pseudogene, amplify it first with a locus-specific long PCR and sequence from inside that product, or move the primers onto bases that differ from the paralog.`);
     if (!res.pairs.length) msg('warn', `<b>Primer-BLAST returned no pairs.</b> ${esc(res.message)}`, [{ label: 'Open job in Primer-BLAST', fn: () => PS.pbOpenForm(fields) }]);
@@ -2021,7 +2062,7 @@ function renderPairs() {
     if (pb.status === 'run') {
       body.innerHTML = `<div class="empty">
         <p style="margin:0 0 6px"><span class="spin"></span> Primer-BLAST is screening candidates against the human genome. <b id="pbWaitPhase">${esc(pb.phase || 'Running')}</b> · <span id="pbWaitClock" class="num">${fmtDur((Date.now() - pb.started) / 1000)}</span></p>
-        <p style="margin:0">This usually takes 1–6 minutes. The local Primer3 pairs are ready in the other tab meanwhile.</p>
+        <p style="margin:0">This usually takes 1–10 minutes, depending on how busy NCBI is; the page checks once a minute. The local Primer3 pairs are ready in the other tab meanwhile.</p>
         <div class="row" style="justify-content:center;margin-top:10px"><a id="pbJobLink" class="btn small" target="_blank" rel="noopener" ${pb.jobUrl ? `href="${esc(pb.jobUrl)}"` : 'hidden'}>View job at NCBI</a><button class="btn small" type="button" id="pbCancel">Stop waiting</button></div></div>`;
       $('pbCancel').onclick = () => { if (current) current.ctl.abort(); pb.status = 'fail'; pb.error = 'Stopped by you'; setStep('pb', 'skip', 'Stopped'); renderPairs(); };
       return;
@@ -2189,7 +2230,7 @@ async function checkPairSpecificity(p) {
   renderPairs(); renderDetail();
   const tick = setInterval(() => { const c = $('chkClock'); if (c) c.textContent = fmtDur((Date.now() - p.pbCheck.started) / 1000); }, 1000);
   try {
-    const res = await PS.pbRun(PS.pbFields(state.T, state.job, S, { checkF: p.f, checkR: p.r }), { v: state.v, T: state.T, signal: ctl.signal });
+    const res = await pbShared(PS.pbFields(state.T, state.job, S, { checkF: p.f, checkR: p.r }), { v: state.v, T: state.T }, ctl.signal);
     if (!current || current.id !== id) return;
     const q = res.pairs.find(x => x.f === p.f && x.r === p.r) || res.pairs[0];
     p.pbCheck = q ? { pair: q } : { error: res.message || 'Primer-BLAST returned no result for this pair.' };
