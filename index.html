@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>PrimerScope</title>
+<script>try { document.documentElement.dataset.theme = localStorage.getItem('primerscope.theme') || 'dark'; } catch (e) { document.documentElement.dataset.theme = 'dark'; }</script>
 <meta name="description" content="Design Sanger sequencing primers around a single human variant (GRCh38) with Primer3 and NCBI Primer-BLAST.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -13,33 +14,34 @@
 /* Layout: bench-sheet app — a fixed input rail on the left, a scrolling results sheet on the right; stacks on phones.
    Colour carries meaning everywhere: green = forward primer, turquoise = reverse primer, orange = the variant. */
 :root{
-  --bg:#EEF1EF; --surface:#FFFFFF; --sunk:#F6F8F7; --ink:#131815; --muted:#5C6661; --line:#D9E0DC; --line-strong:#B9C4BE;
-  --fwd:#17864A; --fwd-soft:#DDF3E6; --rev:#0B8792; --rev-soft:#D6F1F3; --var:#E2690F; --var-soft:#FDE9D8;
-  --ok:#17864A; --ok-soft:#DDF3E6; --warn:#A86A00; --warn-soft:#FBEFD2; --bad:#C2372F; --bad-soft:#FADDDA; --idle:#8A948F;
-  --btn-ink:#FFFFFF;
+  /* dark is the default theme; [data-theme="light"] switches to light */
+  --bg:#1B2420; --surface:#232D28; --sunk:#1E2824; --ink:#E7EEEA; --muted:#A1AEA7; --line:#33413A; --line-strong:#4A5A52;
+  --fwd:#40CF7E; --fwd-soft:#1D3B2A; --rev:#2EC4D1; --rev-soft:#173A3E; --var:#FF9846; --var-soft:#46301D; --dup:#B39AF5;
+  --ok:#40CF7E; --ok-soft:#1D3B2A; --warn:#F2B53C; --warn-soft:#41331A; --bad:#FF7268; --bad-soft:#46231F; --idle:#7D8A84;
+  --btn-ink:#13201A;
+  --art-tile:url("data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 width=%27360%27 height=%27360%27 viewBox=%270 0 360 360%27><g fill=%27none%27 stroke=%27%23D7EEDF%27 stroke-opacity=%270.05%27 stroke-width=%271.1%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27><g transform=%27translate(70 40) scale(1.15)%27><path d=%27M0 0L-9 15H-4L-13 28H-6L-17 43H17L6 28H13L4 15H9Z%27/><path d=%27M0 43V52%27/></g><g transform=%27translate(230 70) rotate(-12) scale(1)%27><ellipse cx=%270%27 cy=%27-7%27 rx=%272.6%27 ry=%275%27 transform=%27rotate(0)%27/><ellipse cx=%270%27 cy=%27-7%27 rx=%272.6%27 ry=%275%27 transform=%27rotate(60)%27/><ellipse cx=%270%27 cy=%27-7%27 rx=%272.6%27 ry=%275%27 transform=%27rotate(120)%27/><ellipse cx=%270%27 cy=%27-7%27 rx=%272.6%27 ry=%275%27 transform=%27rotate(180)%27/><ellipse cx=%270%27 cy=%27-7%27 rx=%272.6%27 ry=%275%27 transform=%27rotate(240)%27/><ellipse cx=%270%27 cy=%27-7%27 rx=%272.6%27 ry=%275%27 transform=%27rotate(300)%27/><circle r=%272.4%27/><path d=%27M0 3C1 12-2 20 0 30M0 20C5 16 9 17 11 13M0 24C-5 21-8 22-10 18%27/></g><g transform=%27translate(160 190) rotate(18) scale(1)%27><path d=%27M0 0V-36%27/><path d=%27M0 -7C5 -10 8 -14 9 -18C4 -16 1 -13 0 -7%27/><path d=%27M0 -7C-5 -10 -8 -14 -9 -18C-4 -16 -1 -13 0 -7%27/><path d=%27M0 -14C5 -17 8 -21 9 -25C4 -23 1 -20 0 -14%27/><path d=%27M0 -14C-5 -17 -8 -21 -9 -25C-4 -23 -1 -20 0 -14%27/><path d=%27M0 -21C5 -24 8 -28 9 -32C4 -30 1 -27 0 -21%27/><path d=%27M0 -21C-5 -24 -8 -28 -9 -32C-4 -30 -1 -27 0 -21%27/><path d=%27M0 -28C5 -31 8 -35 9 -39C4 -37 1 -34 0 -28%27/><path d=%27M0 -28C-5 -31 -8 -35 -9 -39C-4 -37 -1 -34 0 -28%27/></g><g transform=%27translate(300 190) scale(0.8)%27><path d=%27M0 0L-9 15H-4L-13 28H-6L-17 43H17L6 28H13L4 15H9Z%27/><path d=%27M0 43V52%27/></g><g transform=%27translate(40 200) scale(1.1)%27><circle cx=%270%27 cy=%27-4%27 r=%273%27 transform=%27rotate(0)%27/><circle cx=%270%27 cy=%27-4%27 r=%273%27 transform=%27rotate(72)%27/><circle cx=%270%27 cy=%27-4%27 r=%273%27 transform=%27rotate(144)%27/><circle cx=%270%27 cy=%27-4%27 r=%273%27 transform=%27rotate(216)%27/><circle cx=%270%27 cy=%27-4%27 r=%273%27 transform=%27rotate(288)%27/><circle r=%271.3%27/></g><g transform=%27translate(110 300) rotate(10) scale(0.85)%27><ellipse cx=%270%27 cy=%27-7%27 rx=%272.6%27 ry=%275%27 transform=%27rotate(0)%27/><ellipse cx=%270%27 cy=%27-7%27 rx=%272.6%27 ry=%275%27 transform=%27rotate(60)%27/><ellipse cx=%270%27 cy=%27-7%27 rx=%272.6%27 ry=%275%27 transform=%27rotate(120)%27/><ellipse cx=%270%27 cy=%27-7%27 rx=%272.6%27 ry=%275%27 transform=%27rotate(180)%27/><ellipse cx=%270%27 cy=%27-7%27 rx=%272.6%27 ry=%275%27 transform=%27rotate(240)%27/><ellipse cx=%270%27 cy=%27-7%27 rx=%272.6%27 ry=%275%27 transform=%27rotate(300)%27/><circle r=%272.4%27/><path d=%27M0 3C1 12-2 20 0 30M0 20C5 16 9 17 11 13M0 24C-5 21-8 22-10 18%27/></g><g transform=%27translate(250 300) scale(0.95)%27><path d=%27M0 0L-9 15H-4L-13 28H-6L-17 43H17L6 28H13L4 15H9Z%27/><path d=%27M0 43V52%27/></g><g transform=%27translate(330 40) scale(0.9)%27><circle cx=%270%27 cy=%27-4%27 r=%273%27 transform=%27rotate(0)%27/><circle cx=%270%27 cy=%27-4%27 r=%273%27 transform=%27rotate(72)%27/><circle cx=%270%27 cy=%27-4%27 r=%273%27 transform=%27rotate(144)%27/><circle cx=%270%27 cy=%27-4%27 r=%273%27 transform=%27rotate(216)%27/><circle cx=%270%27 cy=%27-4%27 r=%273%27 transform=%27rotate(288)%27/><circle r=%271.3%27/></g><g transform=%27translate(30 345) rotate(-25) scale(0.8)%27><path d=%27M0 0V-36%27/><path d=%27M0 -7C5 -10 8 -14 9 -18C4 -16 1 -13 0 -7%27/><path d=%27M0 -7C-5 -10 -8 -14 -9 -18C-4 -16 -1 -13 0 -7%27/><path d=%27M0 -14C5 -17 8 -21 9 -25C4 -23 1 -20 0 -14%27/><path d=%27M0 -14C-5 -17 -8 -21 -9 -25C-4 -23 -1 -20 0 -14%27/><path d=%27M0 -21C5 -24 8 -28 9 -32C4 -30 1 -27 0 -21%27/><path d=%27M0 -21C-5 -24 -8 -28 -9 -32C-4 -30 -1 -27 0 -21%27/><path d=%27M0 -28C5 -31 8 -35 9 -39C4 -37 1 -34 0 -28%27/><path d=%27M0 -28C-5 -31 -8 -35 -9 -39C-4 -37 -1 -34 0 -28%27/></g><g transform=%27translate(190 120) scale(0.8)%27><circle cx=%270%27 cy=%27-4%27 r=%273%27 transform=%27rotate(0)%27/><circle cx=%270%27 cy=%27-4%27 r=%273%27 transform=%27rotate(72)%27/><circle cx=%270%27 cy=%27-4%27 r=%273%27 transform=%27rotate(144)%27/><circle cx=%270%27 cy=%27-4%27 r=%273%27 transform=%27rotate(216)%27/><circle cx=%270%27 cy=%27-4%27 r=%273%27 transform=%27rotate(288)%27/><circle r=%271.3%27/></g></g></svg>");
+  --art-forest:url("data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 width=%271200%27 height=%27160%27 viewBox=%270 0 1200 160%27 preserveAspectRatio=%27none%27><g fill=%27%23D7EEDF%27 fill-opacity=%270.026%27><path d=%27M0 85L-15.75 126.25H-7.875L-18.529411764705884 160H18.529411764705884L7.875 126.25H15.75Z%27/><path d=%27M40 100L27.4 133.0H33.7L25.176470588235293 160H54.82352941176471L46.3 133.0H52.6Z%27/><path d=%27M86 55L63.95 112.75H74.975L60.05882352941177 160H111.94117647058823L97.025 112.75H108.05Z%27/><path d=%27M120 100L107.4 133.0H113.7L105.17647058823529 160H134.8235294117647L126.3 133.0H132.6Z%27/><path d=%27M148 100L135.4 133.0H141.7L133.1764705882353 160H162.8235294117647L154.3 133.0H160.6Z%27/><path d=%27M194 40L168.8 106.0H181.4L164.35294117647058 160H223.64705882352942L206.6 106.0H219.2Z%27/><path d=%27M234 65L214.05 117.25H224.025L210.52941176470588 160H257.47058823529414L243.975 117.25H253.95Z%27/><path d=%27M262 85L246.25 126.25H254.125L243.47058823529412 160H280.52941176470586L269.875 126.25H277.75Z%27/><path d=%27M302 70L283.1 119.5H292.55L279.7647058823529 160H324.2352941176471L311.45 119.5H320.9Z%27/><path d=%27M336 65L316.05 117.25H326.025L312.52941176470586 160H359.47058823529414L345.975 117.25H355.95Z%27/><path d=%27M364 70L345.1 119.5H354.55L341.7647058823529 160H386.2352941176471L373.45 119.5H382.9Z%27/><path d=%27M398 100L385.4 133.0H391.7L383.1764705882353 160H412.8235294117647L404.3 133.0H410.6Z%27/><path d=%27M438 65L418.05 117.25H428.025L414.52941176470586 160H461.47058823529414L447.975 117.25H457.95Z%27/><path d=%27M478 85L462.25 126.25H470.125L459.47058823529414 160H496.52941176470586L485.875 126.25H493.75Z%27/><path d=%27M512 70L493.1 119.5H502.55L489.7647058823529 160H534.2352941176471L521.45 119.5H530.9Z%27/><path d=%27M552 80L535.2 124.0H543.6L532.2352941176471 160H571.7647058823529L560.4 124.0H568.8Z%27/><path d=%27M592 100L579.4 133.0H585.7L577.1764705882352 160H606.8235294117648L598.3 133.0H604.6Z%27/><path d=%27M632 80L615.2 124.0H623.6L612.2352941176471 160H651.7647058823529L640.4 124.0H648.8Z%27/><path d=%27M678 40L652.8 106.0H665.4L648.3529411764706 160H707.6470588235294L690.6 106.0H703.2Z%27/><path d=%27M712 85L696.25 126.25H704.125L693.4705882352941 160H730.5294117647059L719.875 126.25H727.75Z%27/><path d=%27M746 55L723.95 112.75H734.975L720.0588235294117 160H771.9411764705883L757.025 112.75H768.05Z%27/><path d=%27M786 100L773.4 133.0H779.7L771.1764705882352 160H800.8235294117648L792.3 133.0H798.6Z%27/><path d=%27M826 100L813.4 133.0H819.7L811.1764705882352 160H840.8235294117648L832.3 133.0H838.6Z%27/><path d=%27M866 40L840.8 106.0H853.4L836.3529411764706 160H895.6470588235294L878.6 106.0H891.2Z%27/><path d=%27M906 65L886.05 117.25H896.025L882.5294117647059 160H929.4705882352941L915.975 117.25H925.95Z%27/><path d=%27M940 55L917.95 112.75H928.975L914.0588235294117 160H965.9411764705883L951.025 112.75H962.05Z%27/><path d=%27M986 40L960.8 106.0H973.4L956.3529411764706 160H1015.6470588235294L998.6 106.0H1011.2Z%27/><path d=%27M1026 55L1003.95 112.75H1014.975L1000.0588235294117 160H1051.9411764705883L1037.025 112.75H1048.05Z%27/><path d=%27M1072 85L1056.25 126.25H1064.125L1053.4705882352941 160H1090.5294117647059L1079.875 126.25H1087.75Z%27/><path d=%27M1106 70L1087.1 119.5H1096.55L1083.764705882353 160H1128.235294117647L1115.45 119.5H1124.9Z%27/><path d=%27M1146 65L1126.05 117.25H1136.025L1122.5294117647059 160H1169.4705882352941L1155.975 117.25H1165.95Z%27/><path d=%27M1174 100L1161.4 133.0H1167.7L1159.1764705882354 160H1188.8235294117646L1180.3 133.0H1186.6Z%27/><path d=%27M1202 55L1179.95 112.75H1190.975L1176.0588235294117 160H1227.9411764705883L1213.025 112.75H1224.05Z%27/></g></svg>");
   --f-display:"Bricolage Grotesque","Avenir Next","Segoe UI",system-ui,sans-serif;
   --f-body:"Geist","Segoe UI",system-ui,-apple-system,sans-serif;
   --f-mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
   --r:10px; --r-sm:6px;
+  color-scheme:dark;
+}
+:root[data-theme="light"]{
+  --bg:#EEF1EF; --surface:#FFFFFF; --sunk:#F6F8F7; --ink:#131815; --muted:#5C6661; --line:#D9E0DC; --line-strong:#B9C4BE;
+  --fwd:#17864A; --fwd-soft:#DDF3E6; --rev:#0B8792; --rev-soft:#D6F1F3; --var:#E2690F; --var-soft:#FDE9D8; --dup:#6B4FC2;
+  --ok:#17864A; --ok-soft:#DDF3E6; --warn:#A86A00; --warn-soft:#FBEFD2; --bad:#C2372F; --bad-soft:#FADDDA; --idle:#8A948F;
+  --btn-ink:#FFFFFF;
+  --art-tile:url("data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 width=%27360%27 height=%27360%27 viewBox=%270 0 360 360%27><g fill=%27none%27 stroke=%27%231F5E3B%27 stroke-opacity=%270.07%27 stroke-width=%271.1%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27><g transform=%27translate(70 40) scale(1.15)%27><path d=%27M0 0L-9 15H-4L-13 28H-6L-17 43H17L6 28H13L4 15H9Z%27/><path d=%27M0 43V52%27/></g><g transform=%27translate(230 70) rotate(-12) scale(1)%27><ellipse cx=%270%27 cy=%27-7%27 rx=%272.6%27 ry=%275%27 transform=%27rotate(0)%27/><ellipse cx=%270%27 cy=%27-7%27 rx=%272.6%27 ry=%275%27 transform=%27rotate(60)%27/><ellipse cx=%270%27 cy=%27-7%27 rx=%272.6%27 ry=%275%27 transform=%27rotate(120)%27/><ellipse cx=%270%27 cy=%27-7%27 rx=%272.6%27 ry=%275%27 transform=%27rotate(180)%27/><ellipse cx=%270%27 cy=%27-7%27 rx=%272.6%27 ry=%275%27 transform=%27rotate(240)%27/><ellipse cx=%270%27 cy=%27-7%27 rx=%272.6%27 ry=%275%27 transform=%27rotate(300)%27/><circle r=%272.4%27/><path d=%27M0 3C1 12-2 20 0 30M0 20C5 16 9 17 11 13M0 24C-5 21-8 22-10 18%27/></g><g transform=%27translate(160 190) rotate(18) scale(1)%27><path d=%27M0 0V-36%27/><path d=%27M0 -7C5 -10 8 -14 9 -18C4 -16 1 -13 0 -7%27/><path d=%27M0 -7C-5 -10 -8 -14 -9 -18C-4 -16 -1 -13 0 -7%27/><path d=%27M0 -14C5 -17 8 -21 9 -25C4 -23 1 -20 0 -14%27/><path d=%27M0 -14C-5 -17 -8 -21 -9 -25C-4 -23 -1 -20 0 -14%27/><path d=%27M0 -21C5 -24 8 -28 9 -32C4 -30 1 -27 0 -21%27/><path d=%27M0 -21C-5 -24 -8 -28 -9 -32C-4 -30 -1 -27 0 -21%27/><path d=%27M0 -28C5 -31 8 -35 9 -39C4 -37 1 -34 0 -28%27/><path d=%27M0 -28C-5 -31 -8 -35 -9 -39C-4 -37 -1 -34 0 -28%27/></g><g transform=%27translate(300 190) scale(0.8)%27><path d=%27M0 0L-9 15H-4L-13 28H-6L-17 43H17L6 28H13L4 15H9Z%27/><path d=%27M0 43V52%27/></g><g transform=%27translate(40 200) scale(1.1)%27><circle cx=%270%27 cy=%27-4%27 r=%273%27 transform=%27rotate(0)%27/><circle cx=%270%27 cy=%27-4%27 r=%273%27 transform=%27rotate(72)%27/><circle cx=%270%27 cy=%27-4%27 r=%273%27 transform=%27rotate(144)%27/><circle cx=%270%27 cy=%27-4%27 r=%273%27 transform=%27rotate(216)%27/><circle cx=%270%27 cy=%27-4%27 r=%273%27 transform=%27rotate(288)%27/><circle r=%271.3%27/></g><g transform=%27translate(110 300) rotate(10) scale(0.85)%27><ellipse cx=%270%27 cy=%27-7%27 rx=%272.6%27 ry=%275%27 transform=%27rotate(0)%27/><ellipse cx=%270%27 cy=%27-7%27 rx=%272.6%27 ry=%275%27 transform=%27rotate(60)%27/><ellipse cx=%270%27 cy=%27-7%27 rx=%272.6%27 ry=%275%27 transform=%27rotate(120)%27/><ellipse cx=%270%27 cy=%27-7%27 rx=%272.6%27 ry=%275%27 transform=%27rotate(180)%27/><ellipse cx=%270%27 cy=%27-7%27 rx=%272.6%27 ry=%275%27 transform=%27rotate(240)%27/><ellipse cx=%270%27 cy=%27-7%27 rx=%272.6%27 ry=%275%27 transform=%27rotate(300)%27/><circle r=%272.4%27/><path d=%27M0 3C1 12-2 20 0 30M0 20C5 16 9 17 11 13M0 24C-5 21-8 22-10 18%27/></g><g transform=%27translate(250 300) scale(0.95)%27><path d=%27M0 0L-9 15H-4L-13 28H-6L-17 43H17L6 28H13L4 15H9Z%27/><path d=%27M0 43V52%27/></g><g transform=%27translate(330 40) scale(0.9)%27><circle cx=%270%27 cy=%27-4%27 r=%273%27 transform=%27rotate(0)%27/><circle cx=%270%27 cy=%27-4%27 r=%273%27 transform=%27rotate(72)%27/><circle cx=%270%27 cy=%27-4%27 r=%273%27 transform=%27rotate(144)%27/><circle cx=%270%27 cy=%27-4%27 r=%273%27 transform=%27rotate(216)%27/><circle cx=%270%27 cy=%27-4%27 r=%273%27 transform=%27rotate(288)%27/><circle r=%271.3%27/></g><g transform=%27translate(30 345) rotate(-25) scale(0.8)%27><path d=%27M0 0V-36%27/><path d=%27M0 -7C5 -10 8 -14 9 -18C4 -16 1 -13 0 -7%27/><path d=%27M0 -7C-5 -10 -8 -14 -9 -18C-4 -16 -1 -13 0 -7%27/><path d=%27M0 -14C5 -17 8 -21 9 -25C4 -23 1 -20 0 -14%27/><path d=%27M0 -14C-5 -17 -8 -21 -9 -25C-4 -23 -1 -20 0 -14%27/><path d=%27M0 -21C5 -24 8 -28 9 -32C4 -30 1 -27 0 -21%27/><path d=%27M0 -21C-5 -24 -8 -28 -9 -32C-4 -30 -1 -27 0 -21%27/><path d=%27M0 -28C5 -31 8 -35 9 -39C4 -37 1 -34 0 -28%27/><path d=%27M0 -28C-5 -31 -8 -35 -9 -39C-4 -37 -1 -34 0 -28%27/></g><g transform=%27translate(190 120) scale(0.8)%27><circle cx=%270%27 cy=%27-4%27 r=%273%27 transform=%27rotate(0)%27/><circle cx=%270%27 cy=%27-4%27 r=%273%27 transform=%27rotate(72)%27/><circle cx=%270%27 cy=%27-4%27 r=%273%27 transform=%27rotate(144)%27/><circle cx=%270%27 cy=%27-4%27 r=%273%27 transform=%27rotate(216)%27/><circle cx=%270%27 cy=%27-4%27 r=%273%27 transform=%27rotate(288)%27/><circle r=%271.3%27/></g></g></svg>");
+  --art-forest:url("data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 width=%271200%27 height=%27160%27 viewBox=%270 0 1200 160%27 preserveAspectRatio=%27none%27><g fill=%27%231F5E3B%27 fill-opacity=%270.038%27><path d=%27M0 85L-15.75 126.25H-7.875L-18.529411764705884 160H18.529411764705884L7.875 126.25H15.75Z%27/><path d=%27M40 100L27.4 133.0H33.7L25.176470588235293 160H54.82352941176471L46.3 133.0H52.6Z%27/><path d=%27M86 55L63.95 112.75H74.975L60.05882352941177 160H111.94117647058823L97.025 112.75H108.05Z%27/><path d=%27M120 100L107.4 133.0H113.7L105.17647058823529 160H134.8235294117647L126.3 133.0H132.6Z%27/><path d=%27M148 100L135.4 133.0H141.7L133.1764705882353 160H162.8235294117647L154.3 133.0H160.6Z%27/><path d=%27M194 40L168.8 106.0H181.4L164.35294117647058 160H223.64705882352942L206.6 106.0H219.2Z%27/><path d=%27M234 65L214.05 117.25H224.025L210.52941176470588 160H257.47058823529414L243.975 117.25H253.95Z%27/><path d=%27M262 85L246.25 126.25H254.125L243.47058823529412 160H280.52941176470586L269.875 126.25H277.75Z%27/><path d=%27M302 70L283.1 119.5H292.55L279.7647058823529 160H324.2352941176471L311.45 119.5H320.9Z%27/><path d=%27M336 65L316.05 117.25H326.025L312.52941176470586 160H359.47058823529414L345.975 117.25H355.95Z%27/><path d=%27M364 70L345.1 119.5H354.55L341.7647058823529 160H386.2352941176471L373.45 119.5H382.9Z%27/><path d=%27M398 100L385.4 133.0H391.7L383.1764705882353 160H412.8235294117647L404.3 133.0H410.6Z%27/><path d=%27M438 65L418.05 117.25H428.025L414.52941176470586 160H461.47058823529414L447.975 117.25H457.95Z%27/><path d=%27M478 85L462.25 126.25H470.125L459.47058823529414 160H496.52941176470586L485.875 126.25H493.75Z%27/><path d=%27M512 70L493.1 119.5H502.55L489.7647058823529 160H534.2352941176471L521.45 119.5H530.9Z%27/><path d=%27M552 80L535.2 124.0H543.6L532.2352941176471 160H571.7647058823529L560.4 124.0H568.8Z%27/><path d=%27M592 100L579.4 133.0H585.7L577.1764705882352 160H606.8235294117648L598.3 133.0H604.6Z%27/><path d=%27M632 80L615.2 124.0H623.6L612.2352941176471 160H651.7647058823529L640.4 124.0H648.8Z%27/><path d=%27M678 40L652.8 106.0H665.4L648.3529411764706 160H707.6470588235294L690.6 106.0H703.2Z%27/><path d=%27M712 85L696.25 126.25H704.125L693.4705882352941 160H730.5294117647059L719.875 126.25H727.75Z%27/><path d=%27M746 55L723.95 112.75H734.975L720.0588235294117 160H771.9411764705883L757.025 112.75H768.05Z%27/><path d=%27M786 100L773.4 133.0H779.7L771.1764705882352 160H800.8235294117648L792.3 133.0H798.6Z%27/><path d=%27M826 100L813.4 133.0H819.7L811.1764705882352 160H840.8235294117648L832.3 133.0H838.6Z%27/><path d=%27M866 40L840.8 106.0H853.4L836.3529411764706 160H895.6470588235294L878.6 106.0H891.2Z%27/><path d=%27M906 65L886.05 117.25H896.025L882.5294117647059 160H929.4705882352941L915.975 117.25H925.95Z%27/><path d=%27M940 55L917.95 112.75H928.975L914.0588235294117 160H965.9411764705883L951.025 112.75H962.05Z%27/><path d=%27M986 40L960.8 106.0H973.4L956.3529411764706 160H1015.6470588235294L998.6 106.0H1011.2Z%27/><path d=%27M1026 55L1003.95 112.75H1014.975L1000.0588235294117 160H1051.9411764705883L1037.025 112.75H1048.05Z%27/><path d=%27M1072 85L1056.25 126.25H1064.125L1053.4705882352941 160H1090.5294117647059L1079.875 126.25H1087.75Z%27/><path d=%27M1106 70L1087.1 119.5H1096.55L1083.764705882353 160H1128.235294117647L1115.45 119.5H1124.9Z%27/><path d=%27M1146 65L1126.05 117.25H1136.025L1122.5294117647059 160H1169.4705882352941L1155.975 117.25H1165.95Z%27/><path d=%27M1174 100L1161.4 133.0H1167.7L1159.1764705882354 160H1188.8235294117646L1180.3 133.0H1186.6Z%27/><path d=%27M1202 55L1179.95 112.75H1190.975L1176.0588235294117 160H1227.9411764705883L1213.025 112.75H1224.05Z%27/></g></svg>");
   color-scheme:light;
-}
-@media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){
-    --bg:#0D110F; --surface:#151B18; --sunk:#111613; --ink:#E6ECE8; --muted:#97A39D; --line:#25302A; --line-strong:#3A4740;
-    --fwd:#40CF7E; --fwd-soft:#16301F; --rev:#2EC4D1; --rev-soft:#10292C; --var:#FF9846; --var-soft:#3A2312;
-    --ok:#40CF7E; --ok-soft:#16301F; --warn:#F2B53C; --warn-soft:#352812; --bad:#FF7268; --bad-soft:#3A1715; --idle:#6E7a74;
-    --btn-ink:#0D110F; color-scheme:dark;
-  }
-}
-:root[data-theme="dark"]{
-  --bg:#0D110F; --surface:#151B18; --sunk:#111613; --ink:#E6ECE8; --muted:#97A39D; --line:#25302A; --line-strong:#3A4740;
-  --fwd:#40CF7E; --fwd-soft:#16301F; --rev:#2EC4D1; --rev-soft:#10292C; --var:#FF9846; --var-soft:#3A2312;
-  --ok:#40CF7E; --ok-soft:#16301F; --warn:#F2B53C; --warn-soft:#352812; --bad:#FF7268; --bad-soft:#3A1715; --idle:#6E7a74;
-  --btn-ink:#0D110F; color-scheme:dark;
 }
 *{box-sizing:border-box}
 html,body{margin:0}
-body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--f-body);-webkit-font-smoothing:antialiased}
+body{background-color:var(--bg);background-image:var(--art-tile);background-size:360px 360px;color:var(--ink);font:15px/1.5 var(--f-body);-webkit-font-smoothing:antialiased;min-height:100vh}
+/* a faint forest line along the bottom of the window, behind everything */
+body::before{content:"";position:fixed;left:0;right:0;bottom:0;height:160px;background:var(--art-forest) repeat-x bottom/1200px 160px;pointer-events:none;z-index:0}
+.wrap{position:relative;z-index:1}
 [hidden]{display:none!important}
 .wrap{max-width:1380px;margin:0 auto;padding-inline:20px;padding-block:18px 48px}
 a{color:var(--rev)}
@@ -104,7 +106,8 @@ details.settings[open]>summary::after{content:"–"}
 .check input{margin-top:3px;accent-color:var(--fwd)}
 
 /* pipeline */
-.pipe{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
+.pipe{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}
+@media (max-width:1180px){.pipe{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media (max-width:760px){.pipe{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .step{border:1px solid var(--line);border-radius:var(--r-sm);padding:8px 10px;background:var(--surface);min-width:0}
 .step .k{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:600;display:flex;align-items:center;gap:6px}
@@ -248,6 +251,7 @@ footer{margin-top:28px;font-size:12.5px;color:var(--muted);border-top:1px solid 
       <a href="https://www.ncbi.nlm.nih.gov/tools/primer-blast/" target="_blank" rel="noopener">Primer-BLAST</a>
       <a href="https://primer3.org/manual.html" target="_blank" rel="noopener">Primer3 manual</a>
       <button type="button" class="linkbtn" data-faq="">FAQ</button>
+      <button type="button" class="linkbtn" id="themeBtn" title="Switch between dark and light mode"></button>
     </nav>
   </header>
 
@@ -352,7 +356,7 @@ footer{margin-top:28px;font-size:12.5px;color:var(--muted);border-top:1px solid 
         <h2>How a design runs</h2>
         <div class="how">
           <div><b>Resolve</b>Maps the variant to GRCh38 through NCBI, using the MANE Select transcript, and checks your reference base against the genome.</div>
-          <div><b>Template</b>Fetches ±700 bp around it in the gene's sense orientation, with exons, repeats and gnomAD v4 variants marked.</div>
+          <div><b>Template</b>Fetches ±700 bp around it in the gene's sense orientation, with exons, repeats, segmental duplications and gnomAD v4 variants marked.</div>
           <div><b>Design</b>Runs Primer3 2.6.1 in your browser at once, then sends the same job to Primer-BLAST for a genome-wide specificity check.</div>
           <div><b>Margins</b>Each primer's 3′ end stays at least the margin away from the variant, so it lands in the readable part of both reads.</div>
           <div><b>Population variants</b>Primers avoid positions where gnomAD reports a variant at or above your frequency threshold, to prevent allele dropout.</div>
@@ -377,7 +381,8 @@ footer{margin-top:28px;font-size:12.5px;color:var(--muted);border-top:1px solid 
           <span><i style="background:var(--var)"></i>Variant and margin</span>
           <span><i style="background:var(--line-strong)"></i>Exon</span>
           <span><i style="background:repeating-linear-gradient(45deg,var(--muted) 0 2px,transparent 2px 4px)"></i>Repeat</span>
-          <span><i style="background:var(--warn)"></i>gnomAD variant ≥ threshold</span>
+          <span><i style="background:var(--dup)"></i>Segmental duplication</span>
+          <span><i style="background:var(--warn)"></i>SNP ≥ threshold</span>
         </div>
         <p class="mapnote" id="mapNote"></p>
       </section>
@@ -394,7 +399,7 @@ footer{margin-top:28px;font-size:12.5px;color:var(--muted);border-top:1px solid 
   </div>
 
   <footer>
-    <span>Data: NCBI Datasets and E-utilities (GRCh38.p14), dbSNP, gnomAD v4, Ensembl repeat annotation. Design: Primer3 2.6.1 compiled to WebAssembly; specificity: NCBI Primer-BLAST.</span>
+    <span>Data: NCBI Datasets and E-utilities (GRCh38.p14), dbSNP, gnomAD v4, Ensembl repeat annotation, UCSC Genome Browser API (segmental duplications; RepeatMasker and dbSNP 155 common as fallbacks), VariantValidator. Design: Primer3 2.6.1 compiled to WebAssembly; specificity: NCBI Primer-BLAST.</span>
     <span>Primer-BLAST has no official API; this page submits to its public web form the same way the website does. Designs are predictions: confirm each pair by PCR and a test sequencing run before clinical use.</span>
   </footer>
 </div>
@@ -433,7 +438,8 @@ footer{margin-top:28px;font-size:12.5px;color:var(--muted);border-top:1px solid 
         <li><b>Orange bar</b>: the variant. <b>Pale orange band</b>: the margin, where no primer may sit.</li>
         <li><b>EXONS</b>: grey blocks are exons of the transcript (ex6 = exon 6). The dashed line is intron.</li>
         <li><b>REPEATS</b>: hatched blocks are repeats (Alu, LINE, simple repeats…) from Ensembl. Primers there tend to bind in many places.</li>
-        <li><b>GNOMAD</b>: each tick is a population variant from gnomAD v4. Taller ticks are more frequent: the scale is logarithmic, from 0.01% to 100%, using the highest population frequency. Orange ticks are at or above your threshold, and primers are kept off them to avoid allele dropout.</li>
+        <li><b>SEG. DUP</b>: purple blocks are segmental duplications, stretches of at least 1 kb with a ≥90% identical copy elsewhere in the genome (UCSC). Darker means more identical. Hover to see where the copy is.</li>
+        <li><b>SNPS</b>: each tick is a population variant from gnomAD v4 (or dbSNP common variants if gnomAD is down). Taller ticks are more frequent: the scale is logarithmic, from 0.01% to 100%, using the highest population frequency. Orange ticks are at or above your threshold, and primers are kept off them to avoid allele dropout.</li>
         <li><b>PRIMERS</b>: the selected pair. The green arrow is the forward primer and the teal arrow the reverse one. The dashed line between them is the product, labelled with its length.</li>
         <li><b>READS</b>: what each Sanger read will show. The faded first ~40 bases of each read are normally unreadable, and the variant should sit in the solid part of both reads.</li>
       </ul>
@@ -450,6 +456,32 @@ footer{margin-top:28px;font-size:12.5px;color:var(--muted);border-top:1px solid 
         <li>To aim for one length, use a narrow range such as 480–520. Expect fewer pairs, and sometimes none.</li>
         <li>The shortest possible product is about 2 × margin + 2 × primer length + the variant length, e.g. 2×60 + 2×20 + 1 ≈ 160 bp with the defaults.</li>
       </ul>
+    </details>
+
+    <details id="faq-segdup">
+      <summary>What does the "Segmental duplication" warning mean?</summary>
+      <p>Part of the DNA around your variant has a near-identical copy somewhere else in the genome, usually a pseudogene or a paralog. The data come from the UCSC segmental duplication track, which covers every gene, so the warning no longer depends on a fixed list of known genes. Primers that sit in the duplicated stretch can amplify both copies, and the Sanger trace then shows the two copies mixed, which can look like a heterozygous variant.</p>
+      <ul>
+        <li>Prefer a Primer-BLAST pair marked <i>Specific</i>. Primer-BLAST checks the copy directly.</li>
+        <li>A local Primer3 primer inside a duplication gets a note on its row. Press <b>Check specificity</b> before ordering it.</li>
+        <li>At ≥98% identity (red), the copies may be impossible to tell apart with short primers. The usual fix is a long, copy-specific PCR first, then sequencing from inside it.</li>
+      </ul>
+    </details>
+
+    <details id="faq-vv">
+      <summary>What does the VariantValidator pill on the variant card mean?</summary>
+      <p>For variants typed in c. notation, PrimerScope asks VariantValidator whether the description is valid on that transcript, while the design runs. This catches numbering mistakes before you order primers for the wrong position. It does not judge the variant itself.</p>
+      <ul>
+        <li><span class="pill ok">VariantValidator ✓</span>: the description is valid as typed.</li>
+        <li><span class="pill warn">VariantValidator: c.…</span>: it is valid, but VariantValidator writes it differently (e.g. shifted 3′ in a repeat). Hover to see the warnings.</li>
+        <li><span class="pill bad">VariantValidator ✗</span> or <i>other position</i>: the description is invalid, or VariantValidator maps it somewhere else. Check the transcript and numbering.</li>
+      </ul>
+      <p>Genomic, VCF-style and rs inputs are not sent, because they already name a genomic position.</p>
+    </details>
+
+    <details id="faq-fallback">
+      <summary>What happens when gnomAD or Ensembl is down?</summary>
+      <p>PrimerScope falls back to the UCSC Genome Browser. RepeatMasker from UCSC replaces the Ensembl repeats. dbSNP 155 common variants replace gnomAD. That fallback only lists variants with a frequency of at least 1% in at least one population project, so rarer variants above your threshold are not screened, and a message says so. If both sources fail, the SNP step shows "Unavailable".</p>
     </details>
 
     <details id="faq-read">
@@ -511,6 +543,7 @@ PS.EUTILS = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/';
 PS.DATASETS = 'https://api.ncbi.nlm.nih.gov/datasets/v2/';
 PS.ENSEMBL = 'https://rest.ensembl.org/';
 PS.GNOMAD = 'https://gnomad.broadinstitute.org/api';
+PS.UCSC = 'https://api.genome.ucsc.edu/';
 PS.M13F = 'TGTAAAACGACGGCCAGT';   // M13(-21) forward
 PS.M13R = 'CAGGAAACAGCTATGAC';    // M13 reverse (-27)
 
@@ -1002,6 +1035,89 @@ PS.repeatsWindow = async function (v, T, signal) {
   return out.sort((x, y) => x.t1 - y.t1);
 };
 
+/* ---------------- UCSC Genome Browser API (segmental duplications; repeat and SNP fallbacks) ---------------- */
+let lastUcsc = 0;
+async function ucscGate() { // UCSC asks API users for about one request per second
+  const wait = lastUcsc + 1100 - Date.now();
+  lastUcsc = Math.max(Date.now(), lastUcsc + 1100);
+  if (wait > 0) await PS.sleep(wait);
+}
+PS.ucscTrack = async function (track, v, T, signal) {
+  const chrom = v.chr === 'MT' ? 'chrM' : 'chr' + v.chr;
+  await ucscGate();
+  const d = await req(`${PS.UCSC}getData/track?genome=hg38;track=${track};chrom=${chrom};start=${T.wA - 1};end=${T.wB};maxItemsOutput=10000`, { label: `UCSC ${track}`, signal, retries: 1, timeout: 20000 });
+  if (d.error) throw new Error(`UCSC ${track}: ${d.error}`);
+  const items = Array.isArray(d[track]) ? d[track] : (Object.values(d).find(Array.isArray) || []);
+  return items;
+};
+// UCSC items are 0-based half-open; convert to 1-based plus-strand bases, then template coordinates
+function ucscSpan(T, start0, end0) {
+  const a = Math.max(T.wA, start0 + 1), b = Math.min(T.wB, Math.max(end0, start0 + 1));
+  return { a, b, t1: Math.min(T.g2t(a), T.g2t(b)), t2: Math.max(T.g2t(a), T.g2t(b)) };
+}
+/* Segmental duplications (genomicSuperDups: >= 1 kb, >= 90% identical copies elsewhere in the genome).
+   Primers inside one may also amplify the copy, which is how pseudogenes and paralogs defeat Sanger. */
+PS.segdupsWindow = async function (v, T, signal) {
+  const items = await PS.ucscTrack('genomicSuperDups', v, T, signal);
+  const seen = new Set(), out = [];
+  for (const r of items) {
+    const other = `${r.otherChrom}:${PS.nf(+r.otherStart + 1)}-${PS.nf(+r.otherEnd)}`;
+    const k = `${r.chromStart}-${r.chromEnd}-${other}`;
+    if (seen.has(k)) continue; seen.add(k);
+    const sp = ucscSpan(T, +r.chromStart, +r.chromEnd);
+    out.push({ t1: sp.t1, t2: sp.t2, g1: +r.chromStart + 1, g2: +r.chromEnd, other, otherChrom: r.otherChrom, frac: +r.fracMatch, len: +r.chromEnd - +r.chromStart });
+  }
+  return out.sort((x, y) => y.frac - x.frac || x.t1 - y.t1);
+};
+/* Fallback when Ensembl is down: RepeatMasker from UCSC */
+PS.repeatsUcsc = async function (v, T, signal) {
+  const items = await PS.ucscTrack('rmsk', v, T, signal);
+  return items.map(r => {
+    const sp = ucscSpan(T, +r.genoStart, +r.genoEnd);
+    return { name: r.repName || r.repClass || 'repeat', t1: sp.t1, t2: sp.t2, g1: +r.genoStart + 1, g2: +r.genoEnd };
+  }).sort((x, y) => x.t1 - y.t1);
+};
+/* Fallback when gnomAD is down: dbSNP 155 common variants (>= 1% in at least one major project) from UCSC */
+PS.snpsUcsc = async function (v, T, signal) {
+  const items = await PS.ucscTrack('dbSnp155Common', v, T, signal);
+  return {
+    variants: items.map(r => {
+      const sp = ucscSpan(T, +r.chromStart, +r.chromEnd);
+      const fr = String(r.minorAlleleFreq || '').split(',').map(Number).filter(x => isFinite(x) && x > 0 && x <= 0.5);
+      const af = fr.length ? Math.max(...fr) : 0.01;   // the track only holds variants >= 1% somewhere
+      return { id: r.name, rs: r.name, pos: sp.a, ref: r.ref || '', alt: String(r.alts || '').replace(/,$/, ''), af, maxPop: af, maxPopId: '', maxPopName: '', score: af, t1: sp.t1, t2: sp.t2, src: 'dbSNP common' };
+    }),
+    note: 'gnomAD was unavailable; primers were screened against UCSC dbSNP 155 common variants instead. That set only holds variants at ≥1% in at least one population project, so rarer variants above your threshold were not screened.'
+  };
+};
+
+/* ---------------- VariantValidator: check the typed c. description before designing ---------------- */
+PS.VV = 'https://rest.variantvalidator.org/VariantValidator/variantvalidator/GRCh38/';
+PS.vvDescription = function (v) {
+  const e = v.edit || {};
+  if (!v.tx || !v.cText || !/c\./i.test(v.input || '')) return null;
+  const tail = { sub: () => `${e.ref}>${e.alt}`, del: () => 'del' + (e.ref || ''), dup: () => 'dup' + (e.ref || ''), ins: () => 'ins' + e.alt, delins: () => 'delins' + e.alt }[e.type];
+  return tail ? `${v.tx.acc}:${v.cText}${tail()}` : null;
+};
+PS.vvCheck = async function (v, signal) {
+  const desc = PS.vvDescription(v);
+  if (!desc) return { status: 'skip' };
+  const d = await req(`${PS.VV}${encodeURIComponent(desc)}/${encodeURIComponent(v.tx.acc)}?content-type=application/json`, { label: 'VariantValidator', signal, retries: 1, timeout: 60000 });
+  const entries = Object.entries(d).filter(([k]) => k !== 'flag' && k !== 'metadata').map(([, e]) => e).filter(e => e && typeof e === 'object');
+  const e = entries.find(x => (x.submitted_variant || '').replace(/\s/g, '') === desc) || entries[0];
+  const warn = ((e && e.validation_warnings) || []).filter(w => !/LRG|^\s*$/.test(w));
+  if (!e || !e.hgvs_transcript_variant) return { status: 'bad', desc, warn: warn.length ? warn : ['VariantValidator could not interpret this description.'] };
+  const g38 = (e.primary_assembly_loci || {}).grch38 || {}, vcf = g38.vcf || null;
+  const c = e.hgvs_transcript_variant;
+  const res = { status: c.replace(/\s/g, '') === desc ? 'ok' : 'fixed', desc, c, g: g38.hgvs_genomic_description || '', vcf, warn };
+  // VCF positions are left-aligned (indels start one base early), so allow a small shift for indels
+  if (vcf && vcf.pos) {
+    const pos = +vcf.pos, tol = v.edit.type === 'sub' ? 0 : 25 + (v.gEnd - v.gStart);
+    if (pos < v.gStart - tol || pos > v.gEnd + tol) res.moved = { pos, ours: v.gStart };
+  }
+  return res;
+};
+
 /* ---------------- design job definition ---------------- */
 PS.makeJob = function (v, T, ctx, settings) {
   const M = settings.margin;
@@ -1131,11 +1247,12 @@ PS.designLocal = async function (T, job, settings, { maskRepeats = true } = {}) 
   }
   return { pairs, explain: { left: kv.PRIMER_LEFT_EXPLAIN, right: kv.PRIMER_RIGHT_EXPLAIN, pair: kv.PRIMER_PAIR_EXPLAIN }, warning: kv.PRIMER_WARNING || '', masked: ex };
 };
-/* thermodynamic metrics for any pair, same conditions for both sources */
+/* thermodynamic metrics for any pair, same conditions for both sources.
+   No PRIMER_PRODUCT_SIZE_RANGE here: without a template it changes nothing, and a wide range costs Primer3 ~2.6 s per call. */
 PS.checkPair = async function (f, r, settings) {
   const lines = [`SEQUENCE_PRIMER=${f}`, `SEQUENCE_PRIMER_REVCOMP=${r}`, `PRIMER_TASK=check_primers`, `PRIMER_PICK_ANYWAY=1`,
     `PRIMER_PICK_LEFT_PRIMER=1`, `PRIMER_PICK_RIGHT_PRIMER=1`, `PRIMER_PICK_INTERNAL_OLIGO=0`,
-    `PRIMER_PRODUCT_SIZE_RANGE=40-100000`, ...(PS.p3Files['humrep.txt'] ? ['PRIMER_MISPRIMING_LIBRARY=/humrep.txt'] : []), ...p3Common(Object.assign({}, settings, { sizeMin: 1, sizeMax: 36, tmMin: 1, tmMax: 99, gcMin: 0, gcMax: 100, tmDiff: 99 })), '='];
+    ...(PS.p3Files['humrep.txt'] ? ['PRIMER_MISPRIMING_LIBRARY=/humrep.txt'] : []), ...p3Common(Object.assign({}, settings, { sizeMin: 1, sizeMax: 36, tmMin: 1, tmMax: 99, gcMin: 0, gcMax: 100, tmDiff: 99 })), '='];
   const { kv } = await PS.runPrimer3(lines.join('\n') + '\n');
   const g = k => kv[k] != null ? +kv[k] : null;
   const lib = x => { if (!x) return null; const m = /^([\d.]+),\s*(?:reverse\s+)?(\S+)/.exec(x); return m ? { score: +m[1], name: m[2] } : null; };
@@ -1193,6 +1310,10 @@ PS.annotatePair = function (p, T, v, ctx, settings) {
   if (a.distF > 650) flags.push({ level: 'warn', text: `Variant ${a.distF} bases into the forward read, beyond typical high-quality length` });
   if (a.distR > 650) flags.push({ level: 'warn', text: `Variant ${a.distR} bases into the reverse read, beyond typical high-quality length` });
   if (!a.unique) flags.push({ level: 'warn', text: 'A primer matches more than once inside the template' });
+  if (p.source === 'local') for (const [side, s0, e0] of [['Forward', a.fs, a.fe], ['Reverse', a.rs, a.re]]) {
+    const sd = (ctx.segdups || []).find(d => d.t2 >= s0 && d.t1 <= e0);
+    if (sd) flags.push({ level: sd.frac >= 0.98 ? 'bad' : 'warn', text: `${side} primer lies in a segmental duplication, ${(sd.frac * 100).toFixed(1)}% identical to ${sd.other}; it may amplify that copy too. Check specificity before ordering` });
+  }
   a.flags = flags;
   return Object.assign(p, { a });
 };
@@ -1421,7 +1542,7 @@ function readSettings() {
 }
 
 /* ---------------- UI helpers ---------------- */
-const STEPS = [['resolve', 'Resolve'], ['template', 'Template'], ['snps', 'gnomAD'], ['repeats', 'Repeats'], ['local', 'Primer3'], ['pb', 'Primer-BLAST']];
+const STEPS = [['resolve', 'Resolve'], ['template', 'Template'], ['snps', 'SNPs'], ['repeats', 'Repeats'], ['segdups', 'Seg. dups'], ['local', 'Primer3'], ['pb', 'Primer-BLAST']];
 function initSteps() {
   $('pipe').innerHTML = STEPS.map(([k, l]) => `<div class="step" id="st_${k}" data-st="idle"><div class="k"><span class="dot"></span>${l}</div><div class="s" id="sts_${k}">Waiting</div></div>`).join('');
 }
@@ -1455,7 +1576,7 @@ function download(name, text, type) {
 
 /* ---------------- state ---------------- */
 let state = null, current = null;
-function fresh() { return { v: null, T: null, ctx: { snps: [], repeats: [] }, job: null, local: { pairs: [] }, pb: { status: 'idle' }, tab: 'local', sel: null }; }
+function fresh() { return { v: null, T: null, ctx: { snps: [], repeats: [], segdups: [] }, job: null, local: { pairs: [] }, pb: { status: 'idle' }, tab: 'local', sel: null }; }
 
 let p3Ready = null;
 function ensureP3() {
@@ -1517,6 +1638,7 @@ async function run(override) {
     const parsed = PS.parseInput(input);
     const v = await PS.resolveVariant(parsed, ctl.signal); if (!alive()) return;
     state.v = v;
+    startVV(v, alive);
     setStep('resolve', 'done', v.tx ? `${v.tx.gene} · ${v.tx.acc}` : `chr${v.chr}`);
     stepNow = 'template'; setStep('template', 'run', 'Fetching sequence…');
     const T = await PS.buildTemplate(v, S, ctl.signal); if (!alive()) return;
@@ -1528,26 +1650,47 @@ async function run(override) {
     if (v.refCheck.ok === false && !override) {
       msg('bad', `<b>Reference mismatch.</b> You entered <span class="mono">${esc(v.refCheck.given)}</span> but the genome has <span class="mono">${esc(v.refCheck.found)}</span> at ${esc(v.chrAcc)}:g.${v.gStart}${v.gEnd !== v.gStart ? '_' + v.gEnd : ''}${/c\./i.test(v.input) ? ` (${esc(v.cText)}, read in transcript orientation)` : ' (plus strand)'}. This usually means a different transcript or a numbering error, so design stopped.`,
         [{ label: 'Design anyway', fn: () => run(true) }]);
-      ['snps', 'repeats', 'local', 'pb'].forEach(k => setStep(k, 'skip', 'Stopped'));
+      ['snps', 'repeats', 'segdups', 'local', 'pb'].forEach(k => setStep(k, 'skip', 'Stopped'));
       return;
     }
     if (v.refCheck.ok === false && override) msg('bad', `<b>Designing despite a reference mismatch</b> (entered ${esc(v.refCheck.given)}, genome ${esc(v.refCheck.found)}). Confirm the position before ordering.`);
     if (v.tx && PS.PARALOGS[v.tx.gene]) msg('warn', `<b>${esc(v.tx.gene)}:</b> ${esc(PS.PARALOGS[v.tx.gene])} Rely on the Primer-BLAST specificity result, not on local Primer3 alone.`);
     stepNow = 'snps';
-    setStep('snps', 'run', 'Querying gnomAD…'); setStep('repeats', 'run', 'Querying Ensembl…');
+    setStep('snps', 'run', 'Querying gnomAD…'); setStep('repeats', 'run', 'Querying Ensembl…'); setStep('segdups', 'run', 'Querying UCSC…');
+    // segmental duplications only add notes and a map row, so the design never waits long for UCSC
+    const sdP = PS.segdupsWindow(v, T, ctl.signal).then(value => ({ status: 'fulfilled', value }), reason => ({ status: 'rejected', reason }));
     const [sn, rp] = await Promise.allSettled([PS.gnomadWindow(v, T, ctl.signal), PS.repeatsWindow(v, T, ctl.signal)]);
     if (!alive()) return;
-    if (sn.status === 'fulfilled') {
-      state.ctx.snps = sn.value.variants;
+    // population variants: gnomAD, else UCSC dbSNP common
+    let snps = sn.status === 'fulfilled' ? sn.value : null, snpSrc = 'gnomAD';
+    if (!snps) {
+      addLog(`gnomAD unavailable (${sn.reason && sn.reason.message}); trying UCSC dbSNP common`);
+      setStep('snps', 'run', 'gnomAD down, trying UCSC…');
+      try { snps = await PS.snpsUcsc(v, T, ctl.signal); snpSrc = 'dbSNP common'; } catch (e) { addLog(`UCSC dbSNP fallback failed: ${e.message}`); }
+      if (!alive()) return;
+    }
+    if (snps) {
+      state.ctx.snps = snps.variants;
       const n = state.ctx.snps.filter(x => x.score >= S.snpAF / 100).length;
-      setStep('snps', 'done', `${n} at ≥${S.snpAF}% of ${PS.nf(state.ctx.snps.length)}`);
-      if (sn.value.note) msg('info', esc(sn.value.note));
+      setStep('snps', snpSrc === 'gnomAD' ? 'done' : 'warn', `${n} at ≥${S.snpAF}% of ${PS.nf(state.ctx.snps.length)}${snpSrc === 'gnomAD' ? '' : ' (dbSNP, UCSC)'}`);
+      if (snps.note) msg(snpSrc === 'gnomAD' ? 'info' : 'warn', esc(snps.note));
     } else {
       setStep('snps', 'warn', 'Unavailable');
-      msg('warn', `<b>gnomAD unavailable</b> (${esc(sn.reason && sn.reason.message)}). Primers were not screened for population variants; check them in a genome browser before ordering.`);
+      msg('warn', `<b>gnomAD and the UCSC fallback are unavailable</b> (${esc(sn.reason && sn.reason.message)}). Primers were not screened for population variants; check them in a genome browser before ordering.`);
     }
-    if (rp.status === 'fulfilled') { state.ctx.repeats = rp.value; setStep('repeats', 'done', rp.value.length ? `${rp.value.length} in window` : 'None in window'); }
-    else { setStep('repeats', 'warn', 'Unavailable'); addLog(`Repeats unavailable: ${rp.reason && rp.reason.message}`); }
+    // repeats: Ensembl, else UCSC RepeatMasker
+    let reps = rp.status === 'fulfilled' ? rp.value : null, repSrc = '';
+    if (!reps) {
+      addLog(`Ensembl repeats unavailable (${rp.reason && rp.reason.message}); trying UCSC RepeatMasker`);
+      try { reps = await PS.repeatsUcsc(v, T, ctl.signal); repSrc = ' (UCSC)'; } catch (e) { addLog(`UCSC RepeatMasker fallback failed: ${e.message}`); }
+      if (!alive()) return;
+    }
+    if (reps) { state.ctx.repeats = reps; setStep('repeats', 'done', (reps.length ? `${reps.length} in window` : 'None in window') + repSrc); }
+    else setStep('repeats', 'warn', 'Unavailable');
+    const sd = await Promise.race([sdP, PS.sleep(4000).then(() => null)]);
+    if (!alive()) return;
+    if (sd) applySegdups(sd, false);
+    else { setStep('segdups', 'run', 'Still waiting for UCSC…'); sdP.then(r => { if (alive()) applySegdups(r, true); }); }
     renderMap();
     state.job = PS.makeJob(v, T, state.ctx, S);
     stepNow = 'local'; setStep('local', 'run', 'Designing…');
@@ -1572,6 +1715,52 @@ async function run(override) {
     msg('bad', esc(e.message));
     addLog('Error: ' + e.message);
   }
+}
+
+/* ---------------- segmental duplications (pseudogenes / paralogs) ---------------- */
+function applySegdups(sd, late) {
+  const T = state.T;
+  if (sd.status !== 'fulfilled') { setStep('segdups', 'warn', 'Unavailable'); addLog(`UCSC segmental duplications unavailable: ${sd.reason && sd.reason.message}`); return; }
+  state.ctx.segdups = sd.value;
+  const near = sd.value.filter(d => d.t2 >= T.vS - S.ampMax && d.t1 <= T.vE + S.ampMax);
+  setStep('segdups', near.length ? 'warn' : 'done', near.length ? `${near.length} near the variant` : 'None');
+  if (near.length) {
+    const top = [...new Map(near.map(d => [d.other, d])).values()].slice(0, 3);
+    msg(near.some(d => d.frac >= 0.98) ? 'bad' : 'warn', `<b>Segmental duplication.</b> DNA around this variant has near-identical copies elsewhere in the genome: ${top.map(d => `${esc(d.other)} (${(d.frac * 100).toFixed(1)}% identical, ${PS.nf(d.len)} bp)`).join('; ')}${near.length > top.length ? ` and ${near.length - top.length} more` : ''}. Primers there can amplify the copy too, giving mixed traces. Prefer Primer-BLAST pairs that are specific, or primers on bases that differ between the copies.`);
+  }
+  if (!late) return;
+  // arrived after the design: refresh the notes of pairs already on screen
+  const all = state.local.pairs.concat((state.pb.res && state.pb.res.pairs) || []);
+  for (const p of all) { const m = p.m; PS.annotatePair(p, T, state.v, state.ctx, S); p.m = m; libFlags(p); }
+  renderMap(); if (all.length) { renderPairs(); renderDetail(); }
+}
+
+/* ---------------- VariantValidator (runs alongside the design) ---------------- */
+function startVV(v, alive) {
+  if (!PS.vvDescription(v)) { v.vv = { status: 'skip' }; return; }
+  v.vv = { status: 'run' };
+  PS.vvCheck(v, current.ctl.signal).then(r => {
+    if (!alive()) return;
+    v.vv = r;
+    if (r.status === 'bad') msg('warn', `<b>VariantValidator could not validate ${esc(r.desc)}:</b> ${esc(r.warn.join(' · '))} Primers are designed around the position as typed; check the description.`);
+    else if (r.moved) msg('bad', `<b>VariantValidator places this variant at chr${esc(v.chr)}:${PS.nf(r.moved.pos)}</b>, but it was mapped here to chr${esc(v.chr)}:${PS.nf(r.moved.ours)}. Check the transcript and numbering before ordering.`);
+    else if (r.status === 'fixed') msg('info', `VariantValidator writes this variant as <span class="mono">${esc(r.c)}</span>${r.warn.length ? ` (${esc(r.warn.join(' · '))})` : ''}.`);
+    if (state.T) renderVariant();
+  }).catch(e => {
+    if (!alive()) return;
+    v.vv = { status: 'err', error: e.message }; addLog(`VariantValidator: ${e.message}`);
+    if (state.T) renderVariant();
+  });
+}
+function vvPill(v) {
+  const r = v.vv || {};
+  if (r.status === 'run') return '<span class="pill run"><span class="spin"></span> VariantValidator</span>';
+  if (r.moved) return `<span class="pill bad" title="${esc(r.g || r.c)}">VariantValidator: other position</span>`;
+  if (r.status === 'ok') return `<span class="pill ok" title="${esc(r.g || r.c)}">VariantValidator ✓</span>`;
+  if (r.status === 'fixed') return `<span class="pill ${r.moved ? 'bad' : 'warn'}" title="${esc(r.c + (r.warn.length ? '\n' + r.warn.join('\n') : ''))}">VariantValidator: ${esc(r.c.split(':').pop())}</span>`;
+  if (r.status === 'bad') return `<span class="pill bad" title="${esc(r.warn.join('\n'))}">VariantValidator ✗</span>`;
+  if (r.status === 'err') return `<span class="pill idle" title="${esc(r.error)}">VariantValidator unreachable</span>`;
+  return '';
 }
 
 /* ---------------- Primer-BLAST ---------------- */
@@ -1637,7 +1826,7 @@ function renderVariant() {
         <div class="label">${hdr}</div>
         <div class="vname">${esc(cName)}</div>
         <div class="vsub">${esc(v.region || 'No transcript context')}${v.rs ? ' · ' + esc(v.rs) + (v.rsAlleles ? ' (' + esc(v.rsAlleles) + ')' : '') : ''}</div>
-        <div class="row" style="margin-top:10px">${ref}${mane}</div>
+        <div class="row" style="margin-top:10px">${ref}${mane}${vvPill(v)}</div>
       </div>
       <dl class="kv">
         <dt>Genomic</dt><dd class="mono">${esc(v.gText)}${tx && v.cText && /c\./i.test(v.input) ? '' : ''}</dd>
@@ -1681,7 +1870,8 @@ function renderMap() {
   const ppb = PW / (v1 - v0 + 1);                    // pixels per base
   const showSeq = ppb >= 4.5;
   const dy = showSeq ? 20 : 0;
-  const H = 202 + dy;
+  const dz = dy + 24;                               // rows below the segmental-duplication row
+  const H = 202 + dz;
   const X = t => L0 + (t - v0) * ppb;                // left edge of base t
   const span = (a, b) => { const s = Math.max(a, v0), e = Math.min(b, v1); return s > e ? null : [X(s), X(e + 1)]; };
   const M = S.margin, thr = S.snpAF / 100;
@@ -1730,8 +1920,14 @@ function renderMap() {
     if (w > 46) g += `<text x="${sp[0] + 3}" y="${97 + dy}" style="fill:var(--muted);font:10px var(--f-mono)">${esc(r.name)}</text>`;
   }
   // gnomAD
-  rowLabel(124 + dy, 'GNOMAD');
-  const base = 128 + dy;
+  // segmental duplications: darker = more identical copy
+  rowLabel(110 + dy, 'SEG. DUP');
+  for (const d of state.ctx.segdups || []) {
+    const sp = span(d.t1, d.t2); if (!sp) continue;
+    g += `<rect x="${sp[0]}" y="${101 + dy}" width="${Math.max(2, sp[1] - sp[0])}" height="11" rx="2" style="fill:var(--dup);opacity:${(0.25 + 0.6 * Math.max(0, Math.min(1, (d.frac - 0.9) / 0.1))).toFixed(2)}"><title>Segmental duplication: ${(d.frac * 100).toFixed(1)}% identical to ${esc(d.other)} (${PS.nf(d.len)} bp copy)</title></rect>`;
+  }
+  rowLabel(124 + dz, 'SNPS');
+  const base = 128 + dz;
   for (const s of state.ctx.snps) {
     if (s.score < 1e-4 || s.t1 < v0 || s.t1 > v1) continue;
     const h = 4 + 22 * Math.min(1, (Math.log10(s.score) + 4) / 4), hot = s.score >= thr, xc = X(s.t1) + ppb / 2;
@@ -1742,8 +1938,8 @@ function renderMap() {
   const vb = span(T.vS, T.vE);
   if (vb) g += `<rect x="${vb[0] - (ppb < 2 ? 1 : 0)}" y="30" width="${Math.max(2, vb[1] - vb[0])}" height="${H - 36}" style="fill:var(--var);opacity:${showSeq ? .22 : 1}"><title>Variant</title></rect>`;
   // primers and reads
-  rowLabel(156 + dy, 'PRIMERS');
-  rowLabel(184 + dy, 'READS');
+  rowLabel(156 + dz, 'PRIMERS');
+  rowLabel(184 + dz, 'READS');
   const arrow = (sp, y, dir, col, head, h = 5) => {   // dir 1 = points right
     const [a, b] = sp, len = b - a;
     if (!head || len < 10) return `<rect x="${a}" y="${y - h}" width="${Math.max(1.5, len)}" height="${2 * h}" style="fill:${col}"/>`;
@@ -1752,7 +1948,7 @@ function renderMap() {
   };
   let note = '';
   if (hasPair) {
-    const a = p.a, y = 150 + dy;
+    const a = p.a, y = 150 + dz;
     const prod = span(a.fe + 1, a.rs - 1);
     if (prod) g += `<line x1="${prod[0]}" x2="${prod[1]}" y1="${y}" y2="${y}" style="stroke:var(--ink);stroke-width:1.2;stroke-dasharray:3 3;opacity:.6"/>`;
     const fp = span(a.fs, a.fe), rp = span(a.rs, a.re);
@@ -1763,7 +1959,7 @@ function renderMap() {
     const vis = span(a.fs, a.re);
     if (vis) g += `<text x="${(vis[0] + vis[1]) / 2}" y="${y - 7}" text-anchor="middle" style="fill:var(--ink);font:600 11px var(--f-mono);paint-order:stroke;stroke:var(--surface);stroke-width:4px;stroke-linejoin:round">${a.product} bp product</text>`;
     // reads: faded unreadable start, then the good part, clipped to the product
-    const yF = 178 + dy, yR = 192 + dy;
+    const yF = 178 + dz, yR = 192 + dz;
     const fDead = span(a.fe + 1, Math.min(a.re, a.fe + READ_DEAD)), fGood = span(a.fe + READ_DEAD + 1, Math.min(a.re, a.fe + READ_GOOD));
     const rDead = span(Math.max(a.fs, a.rs - READ_DEAD), a.rs - 1), rGood = span(Math.max(a.fs, a.rs - READ_GOOD), a.rs - READ_DEAD - 1);
     const fT = `<title>Forward read: variant at base ${a.distF + 1}; first ~${READ_DEAD} bases usually unreadable</title>`, rT = `<title>Reverse read: variant at base ${a.distR + 1}; first ~${READ_DEAD} bases usually unreadable</title>`;
@@ -1773,7 +1969,7 @@ function renderMap() {
     if (rGood) g += `<g>${rT}${arrow(rGood, yR, -1, 'var(--rev)', a.rs - READ_GOOD >= v0, 4)}</g>`;
     note = `Forward read: variant at base ${a.distF + 1}. Reverse read: variant at base ${a.distR + 1}. The faded start of each read (~${READ_DEAD} bases) is usually unreadable.`;
   } else {
-    lab += `<text x="${L0}" y="${156 + dy}" style="fill:var(--muted);font:11px var(--f-body)">Select a primer pair to draw it here</text>`;
+    lab += `<text x="${L0}" y="${156 + dz}" style="fill:var(--muted);font:11px var(--f-body)">Select a primer pair to draw it here</text>`;
   }
   const where = `${PS.nf(v1 - v0 + 1)} bp shown${zoom === 'template' ? ' (whole template)' : ''}, gene orientation (5′ → 3′ left to right)`;
   $('map').innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Template map with exons, repeats, population variants, primers and reads">${'<g clip-path="url(#mapclip)">'}${g}</g>${lab}</svg>`;
@@ -2024,6 +2220,14 @@ try { const last = localStorage.getItem('primerscope.last'); if (last) $('vinput
 $('vform').addEventListener('submit', e => { e.preventDefault(); run(false); });
 $('examples').querySelectorAll('.chip').forEach(c => c.onclick = () => { $('vinput').value = c.textContent; run(false); });
 $('resetSettings').onclick = () => { S = Object.assign({}, PS.DEFAULTS); saveSettings(); fillSettings(); toast('Defaults restored'); };
+function syncThemeBtn() { const dark = document.documentElement.dataset.theme !== 'light'; $('themeBtn').textContent = dark ? '☀ Light mode' : '☾ Dark mode'; }
+$('themeBtn').onclick = () => {
+  const t = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
+  document.documentElement.dataset.theme = t;
+  try { localStorage.setItem('primerscope.theme', t); } catch (e) {}
+  syncThemeBtn();
+};
+syncThemeBtn();
 $('ampPresets').querySelectorAll('.chip').forEach(c => c.onclick = () => { $('s_ampMin').value = c.dataset.min; $('s_ampMax').value = c.dataset.max; readSettings(); toast(`Amplicon ${c.dataset.min}–${c.dataset.max} bp; press Design primers to apply`); });
 $('mapZoom').querySelectorAll('button').forEach(b => b.onclick = () => { mapZoom = b.dataset.zoom; try { localStorage.setItem('primerscope.mapzoom', mapZoom); } catch (e) {} if (state && state.T) renderMap(); });
 function openFaq(id) {
