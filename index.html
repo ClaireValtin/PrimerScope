@@ -1448,46 +1448,48 @@ PS.pbParse = function (doc, html) {
   }
   return res;
 };
+/* Text of a Primer-BLAST product box with every visual line break as "\n". The live page separates lines
+   with <br> as well as newlines, and pads with non-breaking spaces, so never rely on textContent layout alone. */
+function dtlText(dtl) {
+  const c = dtl.cloneNode(true);
+  if (c.querySelectorAll) c.querySelectorAll('br').forEach(b => b.replaceWith('\n'));
+  return (c.textContent || '').replace(/\r/g, '').replace(/ /g, ' ');
+}
+/* Parse "Products on intended targets / potentially unintended templates".
+   Matching runs on whitespace-insensitive patterns, not on line positions, so it survives layout changes.
+   A product whose primer alignments cannot be read is graded 'unknown' (shown as "to review"), never as a weak hit. */
 function parseProducts(dtl) {
   if (!dtl) return [];
-  const txt = (dtl.textContent || '').replace(/\r/g, '');
+  const txt = dtlText(dtl);
   if (!txt.trim()) return [];
-  const entries = txt.split(/\n(?=>)|^(?=>)/).map(s => s.trim()).filter(s => s.startsWith('>'));
+  const heads = [...txt.matchAll(/>\s*([A-Z]{1,6}_?\d+(?:\.\d+)?)/g)];
   const out = [];
-  for (const e of entries) {
-    const lines = e.split('\n');
-    const head = lines[0].replace(/^>\s*/, '').trim();
-    const acc = (/^(\S+)/.exec(head) || [])[1] || '';
-    const title = head.slice(acc.length).trim();
+  heads.forEach((h, i) => {
+    const acc = h[1], end = i + 1 < heads.length ? heads[i + 1].index : txt.length;
+    const entry = txt.slice(h.index + h[0].length, end);
+    const title = entry.split(/\n|product length/i)[0].replace(/\s+/g, ' ').trim();
     const chr = PS.ACC2CHR[acc.split('.')[0]] || null;
-    const body = lines.slice(1).join('\n');
-    const prods = body.split(/(?=product length\s*=)/i).filter(x => /product length/i.test(x));
-    for (const pr of prods) {
-      const len = +((/product length\s*=\s*(\d+)/i.exec(pr) || [])[1] || 0);
-      const L = pr.split('\n').map(x => x.trim()).filter(Boolean);
+    const marks = [...entry.matchAll(/product length\s*=\s*(\d+)/gi)];
+    marks.forEach((m, j) => {
+      const len = +m[1], seg = entry.slice(m.index, j + 1 < marks.length ? marks[j + 1].index : entry.length);
       const primers = [];
-      for (let k = 0; k < L.length - 1; k++) {
-        const a = /^(Forward|Reverse) primer\s+\d+\s+([ACGTNacgtn]+)\s+\d+$/.exec(L[k]);
-        const b = /^Template\s+(\d+)\s+([.ACGTNacgtn-]+)\s+(\d+)$/.exec(L[k + 1]);
-        if (a && b) {
-          const al = b[2];
-          const mm = (al.match(/[^.]/g) || []).length, mm3 = (al.slice(-5).match(/[^.]/g) || []).length;
-          primers.push({ role: a[1], mm, mm3, from: +b[1], to: +b[3], align: al });
-          k++;
-        }
+      for (const x of seg.matchAll(/(Forward|Reverse)\s+primer\s+\d+\s+([ACGTN]+)\s+\d+\s+Template\s+(\d+)\s+([.ACGTN-]+)\s+(\d+)/gi)) {
+        const al = x[4];
+        if (al.length !== x[2].length) continue;   // misread alignment: leave the product unread rather than guess
+        primers.push({ role: x[1][0].toUpperCase() + x[1].slice(1).toLowerCase(), mm: (al.match(/[^.]/g) || []).length, mm3: (al.slice(-5).match(/[^.]/g) || []).length, from: +x[3], to: +x[5], align: al });
       }
       // Primer-BLAST's own rule: a primer is specific against a target when it has >=2 mismatches in its 3' 5 nt
       // likely: every primer <=1 mismatch in its last 5 nt and <=3 in total (e.g. a pseudogene copy)
       // possible: <=1 in the last 5 nt, <=5 in total, and a product short enough to amplify in a standard PCR
-      let risk = 'low';
-      if (primers.length && primers.every(q => q.mm3 <= 1)) {
+      let risk = primers.length >= 2 ? 'low' : 'unknown';
+      if (risk === 'low' && primers.every(q => q.mm3 <= 1)) {
         if (primers.every(q => q.mm <= 3) && len <= 4000) risk = 'high';
         else if (primers.every(q => q.mm <= 5) && len <= 1500) risk = 'moderate';
       }
       out.push({ acc, chr, title, length: len, primers, mismatches: primers.map(q => q.mm), risk, from: primers.length ? Math.min(...primers.map(q => Math.min(q.from, q.to))) : null, to: primers.length ? Math.max(...primers.map(q => Math.max(q.from, q.to))) : null });
-    }
-    if (!prods.length) out.push({ acc, chr, title, length: null, primers: [], mismatches: [], risk: 'low' });
-  }
+    });
+    if (!marks.length) out.push({ acc, chr, title, length: null, primers: [], mismatches: [], risk: 'unknown', from: null, to: null });
+  });
   return out;
 }
 PS.parseProducts = parseProducts;
@@ -1982,10 +1984,12 @@ function renderMap() {
 }
 
 /* ---------------- pairs table ---------------- */
-const RISK = { high: ['bad', 'Likely'], moderate: ['warn', 'Possible'], low: ['idle', 'Unlikely'] };
+const RISK = { high: ['bad', 'Likely'], moderate: ['warn', 'Possible'], unknown: ['warn', 'To review'], low: ['idle', 'Unlikely'] };
 function offSummary(off) {
   const hi = off.filter(o => o.risk === 'high').length, mo = off.filter(o => o.risk === 'moderate').length;
-  const pl = k => k === 1 ? '' : 's', lo = off.length - hi - mo;
+  const un = off.filter(o => o.risk === 'unknown').length;
+  const pl = k => k === 1 ? '' : 's', lo = off.length - hi - mo - un;
+  if (un && !hi) return { cls: 'warn', text: [mo ? `${mo} possible off-target${pl(mo)}` : '', `${un} hit${pl(un)} to review`].filter(Boolean).join(' + '), tip: 'PrimerScope could not read the primer alignments of some products Primer-BLAST listed. Open the job in Primer-BLAST and check them by eye: a hit is weak when a primer has 2 or more mismatches in its last 5 bases.' };
   if (hi) return { cls: 'bad', text: `${hi} likely off-target${pl(hi)}${mo ? ` + ${mo} possible` : ''}`, tip: 'Likely: another genomic site that both primers match with at most 1 mismatch in their last 5 bases and at most 3 in total. Expect co-amplification.' };
   if (mo) return { cls: 'warn', text: `${mo} possible off-target${pl(mo)}`, tip: 'Possible: another site matched with at most 1 mismatch in the last 5 bases, at most 5 in total, product up to 1,500 bp. May add a faint extra product.' };
   return { cls: 'ok', text: `Specific · ${lo} weak hit${pl(lo)}`, tip: 'Weak hits: other sites where at least one primer has 2 or more mismatches in its last 5 bases, too many mismatches overall, or a very long product. They almost never amplify.' };
@@ -2121,11 +2125,11 @@ function renderDetail() {
   if (specSrc) {
     const off = specSrc.offTargets;
     const sm = off.length ? offSummary(off) : null;
-    const order = { high: 0, moderate: 1, low: 2 };
+    const order = { high: 0, unknown: 1, moderate: 2, low: 3 };
     const offSorted = off.slice().sort((x, y) => order[x.risk] - order[y.risk] || (x.length || 1e9) - (y.length || 1e9));
     spec = off.length
       ? `<p style="margin:0"><span class="pill ${sm.cls}" title="${esc(sm.tip)}">${sm.text}</span><button type="button" class="qlink" data-faq="faq-spec" title="What the specificity labels mean">?</button> <span class="muted">Primer-BLAST listed ${off.length} other product${off.length > 1 ? 's' : ''}. Graded by its own rule: a primer is specific against a site when it has at least 2 mismatches in its last 5 bases.</span></p>
-         <ul class="off">${offSorted.slice(0, 12).map(o => `<li><span class="pill ${RISK[o.risk][0]}">${RISK[o.risk][1]}</span> <span class="mono">${o.chr ? 'chr' + esc(o.chr) + ':' + PS.nf(o.from) + '-' + PS.nf(o.to) : esc(o.acc)}</span> · ${o.length || '?'} bp${o.length > 2000 ? ' (long; amplifies poorly with short extension times)' : ''} · ${o.primers.map(q => `${q.role === 'Forward' ? 'F' : 'R'} ${q.mm} mismatch${q.mm === 1 ? '' : 'es'}, ${q.mm3} in last 5`).join(' · ')}</li>`).join('')}${off.length > 12 ? `<li>…and ${off.length - 12} more</li>` : ''}</ul>`
+         <ul class="off">${offSorted.slice(0, 12).map(o => `<li><span class="pill ${RISK[o.risk][0]}">${RISK[o.risk][1]}</span> <span class="mono">${o.chr ? 'chr' + esc(o.chr) + ':' + PS.nf(o.from) + '-' + PS.nf(o.to) : esc(o.acc)}</span> · ${o.length || '?'} bp${o.length > 2000 ? ' (long; amplifies poorly with short extension times)' : ''}${o.risk === 'unknown' ? ' · alignment not read; check it in Primer-BLAST' : ''} · ${o.primers.map(q => `${q.role === 'Forward' ? 'F' : 'R'} ${q.mm} mismatch${q.mm === 1 ? '' : 'es'}, ${q.mm3} in last 5`).join(' · ')}</li>`).join('')}${off.length > 12 ? `<li>…and ${off.length - 12} more</li>` : ''}</ul>`
       : `<p style="margin:0"><span class="pill ok">Specific</span> <span class="muted">Primer-BLAST found ${specSrc.intended.length ? 'only the intended product' : 'no other product'} in ${esc(document.querySelector('#s_pbDb option:checked') ? document.querySelector('#s_pbDb option:checked').textContent : 'the database')}.</span></p>`;
   } else if (p.pbCheck && p.pbCheck.running) spec = `<p style="margin:0"><span class="pill run"><span class="spin"></span> Checking with Primer-BLAST · <span id="chkClock">0:00</span></span></p>`;
   else spec = `<p style="margin:0"><span class="pill idle">Not checked</span> <span class="muted">This pair has not been screened against the genome.</span></p>${p.pbCheck && p.pbCheck.error ? `<p class="muted" style="margin:6px 0 0">Last check: ${esc(p.pbCheck.error)}</p>` : ''}`;
