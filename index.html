@@ -264,13 +264,14 @@ footer{margin-top:28px;font-size:12.5px;color:var(--muted);border-top:1px solid 
           <div class="ampsz">
             <span class="label">Amplicon size <button type="button" class="qlink" data-faq="faq-size" title="How the amplicon size works">?</button></span>
             <div class="sgrid">
-              <label class="field"><span>Min bp</span><input id="s_ampMin" type="number" min="100" max="2000"></label>
-              <label class="field"><span>Max bp</span><input id="s_ampMax" type="number" min="150" max="2000"></label>
+              <label class="field"><span>Min bp</span><input id="s_ampMin" type="number" min="100" max="5000"></label>
+              <label class="field"><span>Max bp</span><input id="s_ampMax" type="number" min="150" max="5000"></label>
             </div>
             <div class="chips" id="ampPresets" aria-label="Amplicon size presets">
               <button type="button" class="chip" data-min="200" data-max="400">Short 200–400</button>
               <button type="button" class="chip" data-min="300" data-max="650">Standard 300–650</button>
               <button type="button" class="chip" data-min="600" data-max="900">Long 600–900</button>
+              <button type="button" class="chip" data-min="1500" data-max="2500" title="Locus-specific long PCR, e.g. CYP21A2 away from its pseudogene; sequence with internal primers">Long-range 1500–2500</button>
             </div>
           </div>
           <button class="btn primary" id="go" type="submit">Design primers</button>
@@ -414,8 +415,8 @@ footer{margin-top:28px;font-size:12.5px;color:var(--muted);border-top:1px solid 
         <tbody>
           <tr><td><span class="pill ok">Specific</span></td><td>Primer-BLAST found no other product.</td><td>Best case.</td></tr>
           <tr><td><span class="pill ok">Specific · N weak hits</span></td><td>Every extra product has at least one primer with ≥2 mismatches in its last 5 bases (NCBI's default rule), or too many mismatches overall, or is too long to amplify in a standard PCR.</td><td>Effectively specific. Weak hits almost never amplify.</td></tr>
-          <tr><td><span class="pill warn">N possible off-targets</span></td><td>Both primers have ≤1 mismatch in their last 5 bases, ≤5 mismatches in total, and the product is ≤1,500 bp.</td><td>May give a faint extra band or a little background in the trace. Usually acceptable. Check the gel, or pick another pair if you have one.</td></tr>
-          <tr><td><span class="pill bad">N likely off-targets</span></td><td>Both primers have ≤1 mismatch in their last 5 bases, ≤3 mismatches in total, and the product is ≤4,000 bp.</td><td>Expect co-amplification, typically a pseudogene or paralog. Mixed Sanger traces are likely. Avoid this pair.</td></tr>
+          <tr><td><span class="pill warn">N possible off-targets</span></td><td>Both primers have ≤1 mismatch in their last 5 bases, ≤5 mismatches in total, and the product is ≤1,500 bp (≤ your maximum product size when that is above 2,000 bp).</td><td>May give a faint extra band or a little background in the trace. Usually acceptable. Check the gel, or pick another pair if you have one.</td></tr>
+          <tr><td><span class="pill bad">N likely off-targets</span></td><td>Both primers have ≤1 mismatch in their last 5 bases, ≤3 mismatches in total, and the product is ≤4,000 bp (≤ twice your maximum product size when that is above 2,000 bp).</td><td>Expect co-amplification, typically a pseudogene or paralog. Mixed Sanger traces are likely. Avoid this pair.</td></tr>
         </tbody>
       </table>
       <p>So "3 possible off-targets" means three other genomic sites could give a product, none of them a likely one. Open the pair to see each site, its product size and the mismatches per primer. A product of a very different size from yours can be seen on a gel and cut out, but anything amplified alongside your product is also sequenced by the same primer.</p>
@@ -453,6 +454,7 @@ footer{margin-top:28px;font-size:12.5px;color:var(--muted);border-top:1px solid 
         <li><b>Standard 300–650 bp</b> (default) suits most Sanger runs. A read gives roughly 700–900 good bases after a ~40 base unreadable start, so both reads cover the whole product.</li>
         <li><b>Short 200–400 bp</b> suits degraded DNA (FFPE) or a GC-rich region that amplifies poorly.</li>
         <li><b>Long 600–900 bp</b> lets one amplicon cover a whole exon or two nearby variants. The middle may then be read well by only one of the two reads.</li>
+        <li><b>Long-range 1500–2500 bp</b> (up to 5,000 bp) is for a locus-specific long PCR, e.g. CYP21A2 with primers placed where it differs from the CYP21A1P pseudogene. Use a long-range polymerase and an extension time to match (often ~1 min per kb). The Sanger reads from the PCR primers reach only ~700 bases in from each end, so a variant in the middle is sequenced with an internal primer from the purified product. Primer-BLAST then also counts off-target products up to twice your maximum size, because the long extension time can amplify them.</li>
         <li>To aim for one length, use a narrow range such as 480–520. Expect fewer pairs, and sometimes none.</li>
         <li>The shortest possible product is about 2 × margin + 2 × primer length + the variant length, e.g. 2×60 + 2×20 + 1 ≈ 160 bp with the defaults.</li>
       </ul>
@@ -1318,8 +1320,13 @@ PS.annotatePair = function (p, T, v, ctx, settings) {
   if (a.repR.length) flags.push({ level: 'warn', text: `Reverse primer overlaps a repeat (${[...new Set(a.repR)].join(', ')})` });
   if (a.distF < 40) flags.push({ level: 'warn', text: `Variant only ${a.distF} bases after the forward primer; the start of a Sanger read is usually unreadable` });
   if (a.distR < 40) flags.push({ level: 'warn', text: `Variant only ${a.distR} bases from the reverse primer` });
-  if (a.distF > 650) flags.push({ level: 'warn', text: `Variant ${a.distF} bases into the forward read, beyond typical high-quality length` });
-  if (a.distR > 650) flags.push({ level: 'warn', text: `Variant ${a.distR} bases into the reverse read, beyond typical high-quality length` });
+  if (a.product > 1000) {
+    // long-range product: one good read is enough, or none when it is sequenced with internal primers
+    if (a.distF > 650 && a.distR > 650) flags.push({ level: 'warn', text: `Long product: the variant is ${a.distF} / ${a.distR} bases into the forward / reverse reads, beyond typical high-quality length. Sequence it with an internal primer nearer the variant` });
+  } else {
+    if (a.distF > 650) flags.push({ level: 'warn', text: `Variant ${a.distF} bases into the forward read, beyond typical high-quality length` });
+    if (a.distR > 650) flags.push({ level: 'warn', text: `Variant ${a.distR} bases into the reverse read, beyond typical high-quality length` });
+  }
   if (!a.unique) flags.push({ level: 'warn', text: 'A primer matches more than once inside the template' });
   if (p.source === 'local') for (const [side, s0, e0] of [['Forward', a.fs, a.fe], ['Reverse', a.rs, a.re]]) {
     const sd = (ctx.segdups || []).find(d => d.t2 >= s0 && d.t1 <= e0);
@@ -1330,12 +1337,16 @@ PS.annotatePair = function (p, T, v, ctx, settings) {
 };
 
 /* ---------------- Primer-BLAST client ---------------- */
+/* Off-target size limits. A long-range PCR (max product above 2 kb) uses long extension times, so longer
+   off-target products amplify too: search up to twice the maximum product, and grade by it. */
+PS.maxTarget = settings => settings.ampMax > 2000 ? 2 * settings.ampMax : 4000;
+PS.riskLimits = maxT => ({ high: maxT, moderate: maxT > 4000 ? maxT / 2 : 1500 });
 PS.pbFields = function (T, job, settings, { checkF = null, checkR = null } = {}) {
-  const check = !!(checkF && checkR);
+  const check = !!(checkF && checkR), maxT = PS.maxTarget(settings);
   const f = [
     ['INPUT_SEQUENCE', T.seq], ['CMD', 'request'],
     ...(check ? [] : [['PRIMER5_START', job.fZone[0]], ['PRIMER5_END', job.fZone[1]], ['PRIMER3_START', job.rZone[0]], ['PRIMER3_END', job.rZone[1]]]),
-    ['PRIMER_PRODUCT_MIN', check ? 70 : settings.ampMin], ['PRIMER_PRODUCT_MAX', check ? 4000 : settings.ampMax], ['PRIMER_NUM_RETURN', check ? 1 : settings.nPairs],
+    ['PRIMER_PRODUCT_MIN', check ? 70 : settings.ampMin], ['PRIMER_PRODUCT_MAX', check ? maxT : settings.ampMax], ['PRIMER_NUM_RETURN', check ? 1 : settings.nPairs],
     ['PRIMER_MIN_TM', check ? 40 : settings.tmMin], ['PRIMER_OPT_TM', settings.tmOpt], ['PRIMER_MAX_TM', check ? 80 : settings.tmMax], ['PRIMER_MAX_DIFF_TM', check ? 20 : settings.tmDiff],
     ['PRIMER_MIN_SIZE', check ? 15 : settings.sizeMin], ['PRIMER_OPT_SIZE', settings.sizeOpt], ['PRIMER_MAX_SIZE', check ? 35 : settings.sizeMax],
     ['PRIMER_MIN_GC', check ? 10 : settings.gcMin], ['PRIMER_MAX_GC', check ? 90 : settings.gcMax],
@@ -1348,7 +1359,7 @@ PS.pbFields = function (T, job, settings, { checkF = null, checkR = null } = {})
     ['POLYX', 5], ['PRIMER_MAX_END_GC', 5], ['GC_CLAMP', 0], ['PRIMER_MAX_END_STABILITY', 9],
     ['PRIMER_SPECIFICITY_DATABASE', settings.pbDb], ['ORGANISM', 'Homo sapiens'], ['SEARCH_SPECIFIC_PRIMER', 'on'], ['SEARCHMODE', 0],
     ['TOTAL_PRIMER_SPECIFICITY_MISMATCH', 1], ['PRIMER_3END_SPECIFICITY_MISMATCH', 1], ['MISMATCH_REGION_LENGTH', 5], ['TOTAL_MISMATCH_IGNORE', 6],
-    ['MAX_TARGET_SIZE', 4000], ['HITSIZE', 50000], ['EVALUE', 30000], ['WORD_SIZE', 7], ['MAX_CANDIDATE_PRIMER', 500],
+    ['MAX_TARGET_SIZE', maxT], ['HITSIZE', 50000], ['EVALUE', 30000], ['WORD_SIZE', 7], ['MAX_CANDIDATE_PRIMER', 500],
     ['NUM_TARGETS', 20], ['NUM_TARGETS_WITH_PRIMERS', 1000], ['MAX_TARGET_PER_TEMPLATE', 100],
     ['LOW_COMPLEXITY_FILTER', 'on'], ['UNGAPPED_BLAST', 'on'], ['PRIMER_MISPRIMING_LIBRARY', 'AUTO'],
     ['PRIMER_ON_SPLICE_SITE', 0], ['SPLICE_SITE_OVERLAP_5END', 7], ['SPLICE_SITE_OVERLAP_3END', 4], ['SPLICE_SITE_OVERLAP_3END_MAX', 8],
@@ -1411,7 +1422,8 @@ PS.pbRun = async function (fields, { v, T, onStatus = () => {}, signal = null, m
       html = await req(PS.PB_URL, { method: 'POST', body: params, as: 'text', label: 'Primer-BLAST intended target', signal, retries: 1, timeout: 90000 });
       continue;
     }
-    const res = PS.pbParse(doc, html);
+    const maxT = +((fields.find(([k]) => k === 'MAX_TARGET_SIZE') || [])[1]) || 4000;
+    const res = PS.pbParse(doc, html, PS.riskLimits(maxT));
     // The template's own locus is the intended product even when NCBI files it under unintended templates (check mode)
     for (const p of res.pairs) {
       const own = p.offTargets.filter(o => o.chr === v.chr && o.from != null && o.from >= T.wA && o.to <= T.wB);
@@ -1424,7 +1436,7 @@ PS.pbRun = async function (fields, { v, T, onStatus = () => {}, signal = null, m
   }
   throw new Error('Primer-BLAST polling stopped unexpectedly.');
 };
-PS.pbParse = function (doc, html) {
+PS.pbParse = function (doc, html, limits = PS.riskLimits(4000)) {
   const res = { pairs: [], info: '', message: '', params: {} };
   const infoInp = doc.querySelector('input[name="PRIMER_RESULTS_INFO"]');
   res.info = infoInp ? (infoInp.getAttribute('value') || '') : '';
@@ -1445,7 +1457,7 @@ PS.pbParse = function (doc, html) {
     blk.querySelectorAll('div.prPairTl').forEach(tl => {
       const title = textOf(tl);
       const dtl = tl.parentNode.querySelector('.prPairDtl');
-      p.sections[title] = parseProducts(dtl);
+      p.sections[title] = parseProducts(dtl, limits);
     });
     const un = p.sections['Products on potentially unintended templates'] || [];
     const intended = p.sections['Products on intended targets'] || [];
@@ -1469,7 +1481,7 @@ function dtlText(dtl) {
 /* Parse "Products on intended targets / potentially unintended templates".
    Matching runs on whitespace-insensitive patterns, not on line positions, so it survives layout changes.
    A product whose primer alignments cannot be read is graded 'unknown' (shown as "to review"), never as a weak hit. */
-function parseProducts(dtl) {
+function parseProducts(dtl, limits = PS.riskLimits(4000)) {
   if (!dtl) return [];
   const txt = dtlText(dtl);
   if (!txt.trim()) return [];
@@ -1492,10 +1504,11 @@ function parseProducts(dtl) {
       // Primer-BLAST's own rule: a primer is specific against a target when it has >=2 mismatches in its 3' 5 nt
       // likely: every primer <=1 mismatch in its last 5 nt and <=3 in total (e.g. a pseudogene copy)
       // possible: <=1 in the last 5 nt, <=5 in total, and a product short enough to amplify in a standard PCR
+      // (size limits grow with a long-range design, see PS.riskLimits)
       let risk = primers.length >= 2 ? 'low' : 'unknown';
       if (risk === 'low' && primers.every(q => q.mm3 <= 1)) {
-        if (primers.every(q => q.mm <= 3) && len <= 4000) risk = 'high';
-        else if (primers.every(q => q.mm <= 5) && len <= 1500) risk = 'moderate';
+        if (primers.every(q => q.mm <= 3) && len <= limits.high) risk = 'high';
+        else if (primers.every(q => q.mm <= 5) && len <= limits.moderate) risk = 'moderate';
       }
       out.push({ acc, chr, title, length: len, primers, mismatches: primers.map(q => q.mm), risk, from: primers.length ? Math.min(...primers.map(q => Math.min(q.from, q.to))) : null, to: primers.length ? Math.max(...primers.map(q => Math.max(q.from, q.to))) : null });
     });
@@ -1546,6 +1559,7 @@ function readSettings() {
   saveSettings();
   const p = [];
   if (S.ampMin >= S.ampMax) p.push('Minimum product size must be below the maximum.');
+  if (S.ampMax > 5000) p.push('The maximum product size is 5,000 bp.');
   if (!(S.sizeMin <= S.sizeOpt && S.sizeOpt <= S.sizeMax)) p.push('Primer sizes must satisfy min ≤ opt ≤ max.');
   if (S.sizeMax > 35) p.push('Primer3 accepts primers up to 35 nt.');
   if (!(S.tmMin <= S.tmOpt && S.tmOpt <= S.tmMax)) p.push('Tm values must satisfy min ≤ opt ≤ max.');
@@ -2170,7 +2184,7 @@ function renderDetail() {
     const offSorted = off.slice().sort((x, y) => order[x.risk] - order[y.risk] || (x.length || 1e9) - (y.length || 1e9));
     spec = off.length
       ? `<p style="margin:0"><span class="pill ${sm.cls}" title="${esc(sm.tip)}">${sm.text}</span><button type="button" class="qlink" data-faq="faq-spec" title="What the specificity labels mean">?</button> <span class="muted">Primer-BLAST listed ${off.length} other product${off.length > 1 ? 's' : ''}. Graded by its own rule: a primer is specific against a site when it has at least 2 mismatches in its last 5 bases.</span></p>
-         <ul class="off">${offSorted.slice(0, 12).map(o => `<li><span class="pill ${RISK[o.risk][0]}">${RISK[o.risk][1]}</span> <span class="mono">${o.chr ? 'chr' + esc(o.chr) + ':' + PS.nf(o.from) + '-' + PS.nf(o.to) : esc(o.acc)}</span> · ${o.length || '?'} bp${o.length > 2000 ? ' (long; amplifies poorly with short extension times)' : ''}${o.risk === 'unknown' ? ' · alignment not read; check it in Primer-BLAST' : ''} · ${o.primers.map(q => `${q.role === 'Forward' ? 'F' : 'R'} ${q.mm} mismatch${q.mm === 1 ? '' : 'es'}, ${q.mm3} in last 5`).join(' · ')}</li>`).join('')}${off.length > 12 ? `<li>…and ${off.length - 12} more</li>` : ''}</ul>`
+         <ul class="off">${offSorted.slice(0, 12).map(o => `<li><span class="pill ${RISK[o.risk][0]}">${RISK[o.risk][1]}</span> <span class="mono">${o.chr ? 'chr' + esc(o.chr) + ':' + PS.nf(o.from) + '-' + PS.nf(o.to) : esc(o.acc)}</span> · ${o.length || '?'} bp${o.length > Math.max(2000, S.ampMax) ? ' (long; amplifies poorly with short extension times)' : ''}${o.risk === 'unknown' ? ' · alignment not read; check it in Primer-BLAST' : ''} · ${o.primers.map(q => `${q.role === 'Forward' ? 'F' : 'R'} ${q.mm} mismatch${q.mm === 1 ? '' : 'es'}, ${q.mm3} in last 5`).join(' · ')}</li>`).join('')}${off.length > 12 ? `<li>…and ${off.length - 12} more</li>` : ''}</ul>`
       : `<p style="margin:0"><span class="pill ok">Specific</span> <span class="muted">Primer-BLAST found ${specSrc.intended.length ? 'only the intended product' : 'no other product'} in ${esc(document.querySelector('#s_pbDb option:checked') ? document.querySelector('#s_pbDb option:checked').textContent : 'the database')}.</span></p>`;
     // say where the intended product is, so a perfect match at the target is never mistaken for a missing hit
     const own = specSrc.intended.filter(o => o.chr && o.from != null);
