@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>PrimerScope</title>
 <script>try { document.documentElement.dataset.theme = localStorage.getItem('primerscope.theme') || 'dark'; } catch (e) { document.documentElement.dataset.theme = 'dark'; }</script>
-<meta name="description" content="Design Sanger sequencing primers around a single human variant (GRCh38) with Primer3 and NCBI Primer-BLAST.">
+<meta name="description" content="Design Sanger sequencing and nested PCR primers around a single human variant (GRCh38) with Primer3 and NCBI Primer-BLAST.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Geist:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
@@ -75,6 +75,7 @@ button,input,select{font:inherit;color:inherit}
 
 /* input */
 .vin{display:flex;flex-direction:column;gap:10px}
+.tabs.modetabs{margin:-6px 0 2px}
 .vin input{width:100%;font-family:var(--f-mono);font-size:15px;padding:12px 12px;border:1px solid var(--line-strong);border-radius:var(--r-sm);background:var(--sunk)}
 .vin input:focus{border-color:var(--fwd);outline:none;box-shadow:0 0 0 3px var(--fwd-soft)}
 .btn{appearance:none;border:1px solid var(--line-strong);background:var(--surface);border-radius:var(--r-sm);padding:8px 12px;cursor:pointer;font-weight:500;font-size:14px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
@@ -162,6 +163,7 @@ dl.kv dd{margin:0;min-width:0;overflow-wrap:anywhere}
 /* amplicon size (main panel) */
 .ampsz{display:flex;flex-direction:column;gap:6px}
 .ampsz .sgrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.ampsz .sgrid.three{grid-template-columns:repeat(3,minmax(0,1fr))}
 
 /* FAQ */
 dialog.faq{border:1px solid var(--line-strong);border-radius:var(--r);background:var(--surface);color:var(--ink);padding:0;width:min(760px,calc(100vw - 32px));max-height:calc(100vh - 48px)}
@@ -202,6 +204,7 @@ td.seq .f{color:var(--fwd)} td.seq .r{color:var(--rev)}
 @media (max-width:760px){.primers{grid-template-columns:minmax(0,1fr)}}
 .pcard{border:1px solid var(--line);border-radius:var(--r-sm);padding:12px;min-width:0;position:relative}
 .pcard.f{border-top:3px solid var(--fwd)} .pcard.r{border-top:3px solid var(--rev)}
+.pcard.outer{border-top-style:dashed}
 .pcard .pname{font-family:var(--f-mono);font-weight:600;font-size:13px}
 .pcard .pseq{font-family:var(--f-mono);font-size:16px;letter-spacing:.04em;margin:6px 0;overflow-wrap:anywhere}
 .pcard.f .pseq{color:var(--fwd)} .pcard.r .pseq{color:var(--rev)}
@@ -212,6 +215,8 @@ td.seq .f{color:var(--fwd)} td.seq .r{color:var(--rev)}
 .amp{font-family:var(--f-mono);font-size:12.5px;line-height:1.75;word-break:break-all;background:var(--sunk);border:1px solid var(--line);border-radius:var(--r-sm);padding:10px 12px;max-height:280px;overflow:auto}
 .amp .pf{background:var(--fwd-soft);color:var(--fwd);font-weight:600}
 .amp .pr{background:var(--rev-soft);color:var(--rev);font-weight:600}
+.amp .of{color:var(--fwd);font-weight:600;text-decoration:underline;text-underline-offset:3px}
+.amp .or{color:var(--rev);font-weight:600;text-decoration:underline;text-underline-offset:3px}
 .amp .vv{background:var(--var);color:var(--btn-ink);font-weight:600;border-radius:2px}
 .amp .sn{text-decoration:underline dotted var(--warn);text-underline-offset:3px}
 .amp .ko{box-shadow:inset 0 -2px 0 color-mix(in srgb,var(--var) 45%,transparent)}
@@ -244,7 +249,7 @@ footer{margin-top:28px;font-size:12.5px;color:var(--muted);border-top:1px solid 
       </svg>
       <div>
         <h1>PrimerScope</h1>
-        <p>Sanger primers around one variant · GRCh38 · Primer3 + Primer-BLAST</p>
+        <p>Sanger and nested PCR primers around one variant · GRCh38 · Primer3 + Primer-BLAST</p>
       </div>
     </div>
     <nav class="links">
@@ -259,10 +264,14 @@ footer{margin-top:28px;font-size:12.5px;color:var(--muted);border-top:1px solid 
     <aside class="rail">
       <section class="panel">
         <form class="vin" id="vform" autocomplete="off">
+          <div class="tabs modetabs" role="tablist" id="modeTabs" aria-label="Design mode">
+            <button type="button" class="tab" role="tab" data-mode="sanger">Sanger</button>
+            <button type="button" class="tab" role="tab" data-mode="nested">Nested PCR</button>
+          </div>
           <label class="label" for="vinput">Variant</label>
           <input id="vinput" name="vinput" spellcheck="false" placeholder="NM_004183.4:c.652C>T" value="NM_004183.4:c.652C>T">
           <div class="ampsz">
-            <span class="label">Amplicon size <button type="button" class="qlink" data-faq="faq-size" title="How the amplicon size works">?</button></span>
+            <span class="label"><span id="ampLabel">Amplicon size</span> <button type="button" class="qlink" data-faq="faq-size" title="How the amplicon size works">?</button></span>
             <div class="sgrid">
               <label class="field"><span>Min bp</span><input id="s_ampMin" type="number" min="100" max="5000"></label>
               <label class="field"><span>Max bp</span><input id="s_ampMax" type="number" min="150" max="5000"></label>
@@ -273,6 +282,19 @@ footer{margin-top:28px;font-size:12.5px;color:var(--muted);border-top:1px solid 
               <button type="button" class="chip" data-min="600" data-max="900">Long 600–900</button>
               <button type="button" class="chip" data-min="1500" data-max="2500" title="Locus-specific long PCR, e.g. CYP21A2 away from its pseudogene; sequence with internal primers">Long-range 1500–2500</button>
             </div>
+          </div>
+          <div class="ampsz" id="nestBox" hidden>
+            <span class="label">Outer amplicon (first PCR) <button type="button" class="qlink" data-faq="faq-nested" title="How nested PCR design works">?</button></span>
+            <div class="sgrid three">
+              <label class="field"><span>Min bp</span><input id="s_outerMin" type="number" min="150" max="5000"></label>
+              <label class="field"><span>Max bp</span><input id="s_outerMax" type="number" min="200" max="5000"></label>
+              <label class="field"><span>Gap bp</span><input id="s_nestGap" type="number" min="0" max="200" title="Minimum number of bases between each outer primer and the inner primer on the same side"></label>
+            </div>
+            <div class="chips" id="outerPresets" aria-label="Outer amplicon presets">
+              <button type="button" class="chip" data-min="700" data-max="1200">Standard 700–1200</button>
+              <button type="button" class="chip" data-min="1500" data-max="2500" title="Locus-specific long PCR, e.g. CYP21A2 away from its pseudogene">Long-range 1500–2500</button>
+            </div>
+            <p class="fmt">The outer pair amplifies the locus and is checked genome-wide by Primer-BLAST. The inner pair sits inside the outer product and is the one you sequence with.</p>
           </div>
           <button class="btn primary" id="go" type="submit">Design primers</button>
           <div class="chips" id="examples" aria-label="Examples">
@@ -362,6 +384,7 @@ footer{margin-top:28px;font-size:12.5px;color:var(--muted);border-top:1px solid 
           <div><b>Margins</b>Each primer's 3′ end stays at least the margin away from the variant, so it lands in the readable part of both reads.</div>
           <div><b>Population variants</b>Primers avoid positions where gnomAD reports a variant at or above your frequency threshold, to prevent allele dropout.</div>
           <div><b>Output</b>Ranked pairs with read positions, coverage in c. terms, an annotated amplicon and order lines you can paste.</div>
+          <div><b>Nested PCR</b>The Nested PCR tab designs an outer pair, screened genome-wide by Primer-BLAST, then an inner sequencing pair inside each outer product.</div>
         </div>
       </section>
 
@@ -458,6 +481,17 @@ footer{margin-top:28px;font-size:12.5px;color:var(--muted);border-top:1px solid 
         <li>To aim for one length, use a narrow range such as 480–520. Expect fewer pairs, and sometimes none.</li>
         <li>The shortest possible product is about 2 × margin + 2 × primer length + the variant length, e.g. 2×60 + 2×20 + 1 ≈ 160 bp with the defaults.</li>
       </ul>
+    </details>
+
+    <details id="faq-nested">
+      <summary>How does the Nested PCR tab design primers?</summary>
+      <p>Nested PCR runs two PCRs. The first, with the <b>outer pair</b>, amplifies the locus from genomic DNA. The second, with the <b>inner pair</b>, amplifies a shorter product from inside the first one, usually from a 1:50–1:100 dilution of it. The second round only works if the first one made the right product, so the specificity of the two pairs adds up. It helps with low or degraded DNA and with genes that have a pseudogene.</p>
+      <ul>
+        <li><b>Outer pair</b>: sized by <i>Outer amplicon</i>. Each outer primer stays far enough from the variant to leave room for an inner primer between them. This pair binds genomic DNA, so Primer-BLAST checks it against the whole genome, and the local Primer3 pairs are shown as well.</li>
+        <li><b>Inner pair</b>: designed by Primer3 inside each outer product, at least <i>Gap</i> bases clear of each outer primer, using the same margin, SNP and repeat rules as a Sanger design. Its size is the main <i>Amplicon size</i>. Sequence with the inner primers. The M13 tails, when switched on, go on the inner primers only.</li>
+        <li>The inner pair only meets the outer product, so the specificity that matters is inside that product, and Primer3 checks it there. Press <b>Check inner specificity</b> on a set to screen the inner pair against the genome too.</li>
+      </ul>
+      <p>The map draws the outer pair on the OUTER row, the inner pair on the INNER row, and the reads from the inner primers. In the amplicon sequence, the outer primers are underlined and the inner primers highlighted.</p>
     </details>
 
     <details id="faq-segdup">
@@ -565,7 +599,8 @@ PS.DEFAULTS = {
   sizeMin: 18, sizeOpt: 20, sizeMax: 25, gcMin: 40, gcMax: 60,
   margin: 60, flank: 700, snpAF: 0.1, nPairs: 5,
   usePB: true, pbDb: 'PRIMERDB/genome_selected_species',
-  m13: false, mono: 50, diva: 1.5, dntp: 0.6, oligo: 50, maskRepeatsLocal: true
+  m13: false, mono: 50, diva: 1.5, dntp: 0.6, oligo: 50, maskRepeatsLocal: true,
+  outerMin: 700, outerMax: 1200, nestGap: 20
 };
 
 /* Known paralogs / pseudogenes that commonly defeat gene-specific PCR (non-exhaustive). */
@@ -1280,6 +1315,25 @@ PS.checkPair = async function (f, r, settings) {
   };
 };
 
+/* ---------------- nested PCR ----------------
+   The outer pair amplifies the locus from genomic DNA, so it is the one that needs the genome-wide check (Primer-BLAST).
+   The inner pair only meets the outer product: Primer3 designs it inside that product, at least nestGap bases clear
+   of each outer primer, with the usual margin around the variant. It is the pair that is sequenced. */
+PS.outerSettings = settings => Object.assign({}, settings, { ampMin: settings.outerMin, ampMax: settings.outerMax });
+PS.makeOuterJob = function (job, T, settings) {
+  const room = settings.nestGap + settings.sizeMax;   // space for an inner primer between the outer primer and the margin
+  const fEnd = job.fZone[1] - room, rStart = job.rZone[0] + room;
+  if (fEnd < settings.sizeMin + 5 || rStart > T.L - settings.sizeMin - 5) throw new Error('Template window too small for an outer pair with this margin and gap.');
+  if (rStart - fEnd - 1 + 2 * settings.sizeMin > settings.outerMax) throw new Error(`An outer pair needs room for the variant, its ${settings.margin} bp margins and an inner primer plus a ${settings.nestGap} bp gap on each side, which does not fit in a ${settings.outerMax} bp outer amplicon. Increase the outer maximum, or reduce the margin or gap.`);
+  return Object.assign({}, job, { fZone: [1, fEnd], rZone: [rStart, T.L] });
+};
+PS.innerJob = function (job, outer, settings) {
+  const a = outer.a; if (!a || !a.found) return null;
+  const fZone = [a.fe + settings.nestGap + 1, job.fZone[1]], rZone = [job.rZone[0], a.rs - settings.nestGap - 1];
+  if (fZone[1] - fZone[0] + 1 < settings.sizeMin || rZone[1] - rZone[0] + 1 < settings.sizeMin) return null;
+  return Object.assign({}, job, { fZone, rZone });
+};
+
 /* ---------------- annotate a pair against template/variant/SNPs ---------------- */
 PS.annotatePair = function (p, T, v, ctx, settings) {
   const fPos = T.seq.indexOf(p.f), rrc = PS.revcomp(p.r), rPos = T.seq.indexOf(rrc);
@@ -1318,14 +1372,16 @@ PS.annotatePair = function (p, T, v, ctx, settings) {
   snpFlag(a.fSnps, 'Forward'); snpFlag(a.rSnps, 'Reverse');
   if (a.repF.length) flags.push({ level: 'warn', text: `Forward primer overlaps a repeat (${[...new Set(a.repF)].join(', ')})` });
   if (a.repR.length) flags.push({ level: 'warn', text: `Reverse primer overlaps a repeat (${[...new Set(a.repR)].join(', ')})` });
-  if (a.distF < 40) flags.push({ level: 'warn', text: `Variant only ${a.distF} bases after the forward primer; the start of a Sanger read is usually unreadable` });
-  if (a.distR < 40) flags.push({ level: 'warn', text: `Variant only ${a.distR} bases from the reverse primer` });
-  if (a.product > 1000) {
-    // long-range product: one good read is enough, or none when it is sequenced with internal primers
-    if (a.distF > 650 && a.distR > 650) flags.push({ level: 'warn', text: `Long product: the variant is ${a.distF} / ${a.distR} bases into the forward / reverse reads, beyond typical high-quality length. Sequence it with an internal primer nearer the variant` });
-  } else {
-    if (a.distF > 650) flags.push({ level: 'warn', text: `Variant ${a.distF} bases into the forward read, beyond typical high-quality length` });
-    if (a.distR > 650) flags.push({ level: 'warn', text: `Variant ${a.distR} bases into the reverse read, beyond typical high-quality length` });
+  if (p.role !== 'outer') {   // the outer pair of a nested design is not sequenced, so read positions do not apply
+    if (a.distF < 40) flags.push({ level: 'warn', text: `Variant only ${a.distF} bases after the forward primer; the start of a Sanger read is usually unreadable` });
+    if (a.distR < 40) flags.push({ level: 'warn', text: `Variant only ${a.distR} bases from the reverse primer` });
+    if (a.product > 1000) {
+      // long-range product: one good read is enough, or none when it is sequenced with internal primers
+      if (a.distF > 650 && a.distR > 650) flags.push({ level: 'warn', text: `Long product: the variant is ${a.distF} / ${a.distR} bases into the forward / reverse reads, beyond typical high-quality length. Sequence it with an internal primer nearer the variant` });
+    } else {
+      if (a.distF > 650) flags.push({ level: 'warn', text: `Variant ${a.distF} bases into the forward read, beyond typical high-quality length` });
+      if (a.distR > 650) flags.push({ level: 'warn', text: `Variant ${a.distR} bases into the reverse read, beyond typical high-quality length` });
+    }
   }
   if (!a.unique) flags.push({ level: 'warn', text: 'A primer matches more than once inside the template' });
   if (p.source === 'local') for (const [side, s0, e0] of [['Forward', a.fs, a.fe], ['Reverse', a.rs, a.re]]) {
@@ -1543,6 +1599,8 @@ const pct = x => x >= 0.01 ? (x * 100).toFixed(1) + '%' : x >= 0.0001 ? (x * 100
 
 /* ---------------- settings ---------------- */
 const KEYS = Object.keys(PS.DEFAULTS);
+let mode = 'sanger';   // 'sanger' or 'nested' (the tabs above the variant box)
+try { if (localStorage.getItem('primerscope.mode') === 'nested') mode = 'nested'; } catch (e) {}
 function loadSettings() { let s = {}; try { s = JSON.parse(localStorage.getItem('primerscope.settings') || '{}') || {}; } catch (e) {} return Object.assign({}, PS.DEFAULTS, s); }
 function saveSettings() { try { localStorage.setItem('primerscope.settings', JSON.stringify(S)); } catch (e) {} }
 let S = loadSettings();
@@ -1565,13 +1623,20 @@ function readSettings() {
   if (!(S.tmMin <= S.tmOpt && S.tmOpt <= S.tmMax)) p.push('Tm values must satisfy min ≤ opt ≤ max.');
   if (S.gcMin >= S.gcMax) p.push('GC minimum must be below the maximum.');
   if (S.margin < 20) p.push('Use a margin of at least 20 bp.');
+  if (mode === 'nested') {
+    if (S.outerMin >= S.outerMax) p.push('Minimum outer product size must be below the maximum.');
+    if (S.outerMax > 5000) p.push('The maximum outer product size is 5,000 bp.');
+    if (S.nestGap < 0) p.push('The gap between outer and inner primers cannot be negative.');
+    if (S.outerMax < S.ampMin + 2 * (S.nestGap + S.sizeMin)) p.push(`The outer product (max ${S.outerMax} bp) must be longer than the inner one (min ${S.ampMin} bp) plus an outer primer and the gap on each side.`);
+  }
   return p;
 }
 
 /* ---------------- UI helpers ---------------- */
 const STEPS = [['resolve', 'Resolve'], ['template', 'Template'], ['snps', 'SNPs'], ['repeats', 'Repeats'], ['segdups', 'Seg. dups'], ['local', 'Primer3'], ['pb', 'Primer-BLAST']];
+const stepLabel = (k, l) => mode === 'nested' && k === 'pb' ? 'Primer-BLAST (outer)' : l;
 function initSteps() {
-  $('pipe').innerHTML = STEPS.map(([k, l]) => `<div class="step" id="st_${k}" data-st="idle"><div class="k"><span class="dot"></span>${l}</div><div class="s" id="sts_${k}">Waiting</div></div>`).join('');
+  $('pipe').innerHTML = STEPS.map(([k, l]) => `<div class="step" id="st_${k}" data-st="idle"><div class="k"><span class="dot"></span>${stepLabel(k, l)}</div><div class="s" id="sts_${k}">Waiting</div></div>`).join('');
 }
 function setStep(k, st, text) { const el = $('st_' + k); if (!el) return; el.dataset.st = st; if (text != null) { $('sts_' + k).textContent = text; $('sts_' + k).title = text; } }
 function msg(level, html, actions) {
@@ -1603,7 +1668,27 @@ function download(name, text, type) {
 
 /* ---------------- state ---------------- */
 let state = null, current = null;
-function fresh() { return { v: null, T: null, ctx: { snps: [], repeats: [], segdups: [] }, job: null, local: { pairs: [] }, pb: { status: 'idle' }, tab: 'local', sel: null }; }
+function fresh() { return { mode, v: null, T: null, ctx: { snps: [], repeats: [], segdups: [] }, job: null, outerJob: null, local: { pairs: [] }, pb: { status: 'idle' }, tab: 'local', sel: null }; }
+const nested = () => !!state && state.mode === 'nested';
+/* the job and settings the main design runs on: the outer pair in nested mode, else the Sanger pair */
+const designJob = () => nested() ? state.outerJob : state.job;
+const designSettings = () => nested() ? PS.outerSettings(S) : S;
+const pairSettings = p => p.role === 'outer' ? PS.outerSettings(S) : S;
+const innerOf = p => nested() && p && p.inner && p.inner.a && p.inner.a.found ? p.inner : null;
+const firstSel = list => Math.max(0, nested() ? list.findIndex(p => p.inner) : 0);
+/* nested mode: the best inner (sequencing) pair inside one outer pair, designed locally */
+async function addInner(p) {
+  const T = state.T, ij = PS.innerJob(state.job, p, S), one = Object.assign({}, S, { nPairs: 1 });
+  let loc = ij ? await PS.designLocal(T, ij, one, { maskRepeats: S.maskRepeatsLocal }) : { pairs: [] };
+  if (ij && !loc.pairs.length && S.maskRepeatsLocal && ij.repEx.length) loc = await PS.designLocal(T, ij, one, { maskRepeats: false });
+  const q = loc.pairs[0];
+  p.inner = q || null;
+  if (!q) return;
+  Object.assign(q, { role: 'inner', rank: p.rank });
+  PS.annotatePair(q, T, state.v, state.ctx, S);
+  try { q.m = await PS.checkPair(q.f, q.r, S); } catch (e) { q.m = null; }
+  libFlags(q);
+}
 
 let p3Ready = null;
 function ensureP3() {
@@ -1668,7 +1753,7 @@ async function run(override) {
     startVV(v, alive);
     setStep('resolve', 'done', v.tx ? `${v.tx.gene} · ${v.tx.acc}` : `chr${v.chr}`);
     stepNow = 'template'; setStep('template', 'run', 'Fetching sequence…');
-    const T = await PS.buildTemplate(v, S, ctl.signal); if (!alive()) return;
+    const T = await PS.buildTemplate(v, nested() ? Object.assign({}, S, { ampMax: Math.max(S.ampMax, S.outerMax) }) : S, ctl.signal); if (!alive()) return;
     state.T = T;
     setStep('template', 'done', `${PS.nf(T.L)} bp, ${T.strand > 0 ? 'plus' : 'minus'} strand gene`);
     v.notes.forEach(n => msg('info', esc(n)));
@@ -1720,19 +1805,28 @@ async function run(override) {
     else { setStep('segdups', 'run', 'Still waiting for UCSC…'); sdP.then(r => { if (alive()) applySegdups(r, true); }); }
     renderMap();
     state.job = PS.makeJob(v, T, state.ctx, S);
+    if (nested()) state.outerJob = PS.makeOuterJob(state.job, T, S);
+    const dj = designJob(), ds = designSettings();
     stepNow = 'local'; setStep('local', 'run', 'Designing…');
     await ensureP3();
-    let loc = await PS.designLocal(T, state.job, S, { maskRepeats: S.maskRepeatsLocal });
+    let loc = await PS.designLocal(T, dj, ds, { maskRepeats: S.maskRepeatsLocal });
     let relaxed = false;
-    if (!loc.pairs.length && S.maskRepeatsLocal && state.job.repEx.length) { loc = await PS.designLocal(T, state.job, S, { maskRepeats: false }); relaxed = true; }
-    for (const p of loc.pairs) { PS.annotatePair(p, T, v, state.ctx, S); try { p.m = await PS.checkPair(p.f, p.r, S); } catch (e) { p.m = null; } libFlags(p); }
+    if (!loc.pairs.length && S.maskRepeatsLocal && dj.repEx.length) { loc = await PS.designLocal(T, dj, ds, { maskRepeats: false }); relaxed = true; }
+    for (const p of loc.pairs) {
+      if (nested()) p.role = 'outer';
+      PS.annotatePair(p, T, v, state.ctx, S); try { p.m = await PS.checkPair(p.f, p.r, S); } catch (e) { p.m = null; } libFlags(p);
+      if (nested()) await addInner(p);
+    }
     if (!alive()) return;
     state.local = loc;
-    setStep('local', loc.pairs.length ? 'done' : 'warn', loc.pairs.length ? `${loc.pairs.length} pair${loc.pairs.length > 1 ? 's' : ''}${relaxed ? ', repeats allowed' : ''}` : 'No pairs');
+    const nSets = loc.pairs.filter(p => p.inner).length;
+    if (nested()) setStep('local', nSets ? 'done' : 'warn', loc.pairs.length ? `${nSets} nested set${nSets === 1 ? '' : 's'}${relaxed ? ', repeats allowed' : ''}` : 'No outer pairs');
+    else setStep('local', loc.pairs.length ? 'done' : 'warn', loc.pairs.length ? `${loc.pairs.length} pair${loc.pairs.length > 1 ? 's' : ''}${relaxed ? ', repeats allowed' : ''}` : 'No pairs');
     if (relaxed && loc.pairs.length) msg('warn', 'No local pair fitted outside repeat sequence, so local Primer3 pairs may sit in repeats. Use the Primer-BLAST result for this locus.');
-    if (!loc.pairs.length) msg('warn', `Local Primer3 found no pair. Forward candidates: ${esc(loc.explain.left || '–')}. Reverse: ${esc(loc.explain.right || '–')}. Pairs: ${esc(loc.explain.pair || '–')}. Try a wider product range, a smaller margin, or a lower population-variant threshold.`);
+    if (!loc.pairs.length) msg('warn', `Local Primer3 found no ${nested() ? 'outer ' : ''}pair. Forward candidates: ${esc(loc.explain.left || '–')}. Reverse: ${esc(loc.explain.right || '–')}. Pairs: ${esc(loc.explain.pair || '–')}. Try a wider ${nested() ? 'outer ' : ''}product range, a smaller margin, or a lower population-variant threshold.`);
+    else if (nested() && !nSets) msg('warn', `No inner pair fits inside the local outer pairs. Try a wider inner amplicon range, a smaller gap or margin, or a larger outer amplicon.`);
     state.tab = S.usePB ? 'pb' : 'local';
-    if (loc.pairs.length) state.sel = { src: 'local', i: 0 };
+    if (loc.pairs.length) state.sel = { src: 'local', i: firstSel(loc.pairs) };
     $('pairspanel').hidden = false;
     renderPairs(); renderDetail(); renderMap();
     if (S.usePB) runPB(ctl, id); else setStep('pb', 'skip', 'Off');
@@ -1825,7 +1919,7 @@ function pbShared(fields, opts, signal, onStatus) {
 /* ---------------- Primer-BLAST ---------------- */
 async function runPB(ctl, id) {
   const alive = () => current && current.id === id;
-  const fields = PS.pbFields(state.T, state.job, S);
+  const fields = PS.pbFields(state.T, designJob(), designSettings());
   state.pb = { status: 'run', fields, started: Date.now(), phase: 'Submitting' };
   setStep('pb', 'run', 'Submitting…'); renderPairs();
   const tick = setInterval(() => { if (!alive() || state.pb.status !== 'run') return clearInterval(tick); updatePBClock(); }, 1000);
@@ -1833,19 +1927,25 @@ async function runPB(ctl, id) {
     const res = await pbShared(fields, { v: state.v, T: state.T }, ctl.signal,
       s => { if (!alive()) return; state.pb.jobUrl = s.jobUrl; state.pb.phase = s.status; updatePBClock(true); });
     if (!alive()) return;
-    for (const p of res.pairs) { PS.annotatePair(p, state.T, state.v, state.ctx, S); try { p.m = await PS.checkPair(p.f, p.r, S); } catch (e) { p.m = null; } libFlags(p); }
+    for (const p of res.pairs) {
+      if (nested()) p.role = 'outer';
+      PS.annotatePair(p, state.T, state.v, state.ctx, S); try { p.m = await PS.checkPair(p.f, p.r, S); } catch (e) { p.m = null; } libFlags(p);
+      if (nested()) await addInner(p);
+    }
+    if (!alive()) return;
     state.pb = Object.assign(state.pb, { status: 'done', res });
     const byKey = new Map(res.pairs.map(p => [p.f + '|' + p.r, p]));
     state.local.pairs.forEach(p => { const q = byKey.get(p.f + '|' + p.r); if (q) p.pbMatch = q; });
     const nSpec = res.pairs.filter(p => !p.offTargets.some(o => o.risk === 'high')).length;
     setStep('pb', res.pairs.length ? (nSpec ? 'done' : 'warn') : 'warn', res.pairs.length ? `${res.pairs.length} pairs, ${nSpec} without likely off-targets · ${res.reused ? 'reused' : fmtDur(res.elapsed)}` : 'No pairs');
     if (res.info) msg(nSpec ? 'info' : 'warn', `<b>Primer-BLAST:</b> ${esc(res.info)}`);
+    if (nested() && res.pairs.length && !res.pairs.some(p => p.inner)) msg('warn', 'No inner pair fits inside the Primer-BLAST outer pairs. Try a wider inner amplicon range, a smaller gap or margin, or a larger outer amplicon.');
     if (res.pairs.length && !nSpec) msg('warn', `<b>No pair is specific in this window.</b> Every pair has a likely off-target product (listed under each pair). For a gene with a close paralog or pseudogene, amplify it first with a locus-specific long PCR and sequence from inside that product, or move the primers onto bases that differ from the paralog.`);
     if (!res.pairs.length) msg('warn', `<b>Primer-BLAST returned no pairs.</b> ${esc(res.message)}`, [{ label: 'Open job in Primer-BLAST', fn: () => PS.pbOpenForm(fields) }]);
     const tv = res.params['Min total mismatches'];
     if (tv) addLog(`Primer-BLAST applied: total mismatches ${tv}, 3′ mismatches ${res.params["Min 3' end mismatches"]}, 3′ region ${res.params["Defined 3' end region length"]}, primer size ${res.params['Min Primer size']}/${res.params['Opt Primer size']}/${res.params['Max Primer size']}`);
     state.tab = 'pb';
-    if (res.pairs.length) state.sel = { src: 'pb', i: 0 };
+    if (res.pairs.length) state.sel = { src: 'pb', i: firstSel(res.pairs) };
     renderPairs(); renderDetail(); renderMap();
   } catch (e) {
     if (e.message === 'Cancelled' || !alive()) return;
@@ -1922,13 +2022,15 @@ function mapWindow(T, p) {
 function renderMap() {
   const T = state.T; if (!T) return;
   const p = selectedPair(), hasPair = !!(p && p.a && p.a.found);
+  const q = hasPair ? innerOf(p) : null;   // nested mode: the inner pair, drawn on its own row and read from
+  const ey = nested() ? 28 : 0;             // extra height for that row
   const { v0, v1, zoom } = mapWindow(T, p);
   const W = 1000, L0 = 78, R0 = 18, PW = W - L0 - R0;
   const ppb = PW / (v1 - v0 + 1);                    // pixels per base
   const showSeq = ppb >= 4.5;
   const dy = showSeq ? 20 : 0;
   const dz = dy + 24;                               // rows below the segmental-duplication row
-  const H = 202 + dz;
+  const H = 202 + dz + ey;
   const X = t => L0 + (t - v0) * ppb;                // left edge of base t
   const span = (a, b) => { const s = Math.max(a, v0), e = Math.min(b, v1); return s > e ? null : [X(s), X(e + 1)]; };
   const M = S.margin, thr = S.snpAF / 100;
@@ -1995,8 +2097,9 @@ function renderMap() {
   const vb = span(T.vS, T.vE);
   if (vb) g += `<rect x="${vb[0] - (ppb < 2 ? 1 : 0)}" y="30" width="${Math.max(2, vb[1] - vb[0])}" height="${H - 36}" style="fill:var(--var);opacity:${showSeq ? .22 : 1}"><title>Variant</title></rect>`;
   // primers and reads
-  rowLabel(156 + dz, 'PRIMERS');
-  rowLabel(184 + dz, 'READS');
+  rowLabel(156 + dz, nested() ? 'OUTER' : 'PRIMERS');
+  if (nested()) rowLabel(184 + dz, 'INNER');
+  rowLabel(184 + dz + ey, 'READS');
   const arrow = (sp, y, dir, col, head, h = 5) => {   // dir 1 = points right
     const [a, b] = sp, len = b - a;
     if (!head || len < 10) return `<rect x="${a}" y="${y - h}" width="${Math.max(1.5, len)}" height="${2 * h}" style="fill:${col}"/>`;
@@ -2004,19 +2107,27 @@ function renderMap() {
                    : `<path d="M${b} ${y - h}H${a + 7}V${y - h - 4}L${a - 1} ${y}L${a + 7} ${y + h + 4}V${y + h}H${b}Z" style="fill:${col}"/>`;
   };
   let note = '';
-  if (hasPair) {
-    const a = p.a, y = 150 + dz;
+  const drawPair = (pp, y, what) => {
+    const a = pp.a;
     const prod = span(a.fe + 1, a.rs - 1);
     if (prod) g += `<line x1="${prod[0]}" x2="${prod[1]}" y1="${y}" y2="${y}" style="stroke:var(--ink);stroke-width:1.2;stroke-dasharray:3 3;opacity:.6"/>`;
     const fp = span(a.fs, a.fe), rp = span(a.rs, a.re);
-    if (fp) g += `<g><title>Forward primer ${esc(p.f)}</title>${arrow(fp, y, 1, 'var(--fwd)', a.fe <= v1)}</g>`;
+    if (fp) g += `<g><title>${what ? what + 'forward' : 'Forward'} primer ${esc(pp.f)}</title>${arrow(fp, y, 1, 'var(--fwd)', a.fe <= v1)}</g>`;
     else lab += `<text x="${L0 + 2}" y="${y + 4}" style="fill:var(--fwd);font:600 11px var(--f-mono)">◀ F primer</text>`;
-    if (rp) g += `<g><title>Reverse primer ${esc(p.r)}</title>${arrow(rp, y, -1, 'var(--rev)', a.rs >= v0)}</g>`;
+    if (rp) g += `<g><title>${what ? what + 'reverse' : 'Reverse'} primer ${esc(pp.r)}</title>${arrow(rp, y, -1, 'var(--rev)', a.rs >= v0)}</g>`;
     else lab += `<text x="${L0 + PW - 2}" y="${y + 4}" text-anchor="end" style="fill:var(--rev);font:600 11px var(--f-mono)">R primer ▶</text>`;
     const vis = span(a.fs, a.re);
-    if (vis) g += `<text x="${(vis[0] + vis[1]) / 2}" y="${y - 7}" text-anchor="middle" style="fill:var(--ink);font:600 11px var(--f-mono);paint-order:stroke;stroke:var(--surface);stroke-width:4px;stroke-linejoin:round">${a.product} bp product</text>`;
+    if (vis) g += `<text x="${(vis[0] + vis[1]) / 2}" y="${y - 7}" text-anchor="middle" style="fill:var(--ink);font:600 11px var(--f-mono);paint-order:stroke;stroke:var(--surface);stroke-width:4px;stroke-linejoin:round">${a.product} bp ${what ? what.trim().toLowerCase() + ' ' : ''}product</text>`;
+  };
+  if (hasPair && nested() && !q) {
+    drawPair(p, 150 + dz, 'Outer ');
+    lab += `<text x="${L0}" y="${184 + dz}" style="fill:var(--muted);font:11px var(--f-body)">No inner pair fits inside this outer product</text>`;
+  } else if (hasPair) {
+    if (q) drawPair(p, 150 + dz, 'Outer ');
+    const rd = q || p, a = rd.a;   // the reads come from the sequencing pair
+    drawPair(rd, 150 + dz + ey, q ? 'Inner ' : '');
     // reads: faded unreadable start, then the good part, clipped to the product
-    const yF = 178 + dz, yR = 192 + dz;
+    const yF = 178 + dz + ey, yR = 192 + dz + ey;
     const fDead = span(a.fe + 1, Math.min(a.re, a.fe + READ_DEAD)), fGood = span(a.fe + READ_DEAD + 1, Math.min(a.re, a.fe + READ_GOOD));
     const rDead = span(Math.max(a.fs, a.rs - READ_DEAD), a.rs - 1), rGood = span(Math.max(a.fs, a.rs - READ_GOOD), a.rs - READ_DEAD - 1);
     const fT = `<title>Forward read: variant at base ${a.distF + 1}; first ~${READ_DEAD} bases usually unreadable</title>`, rT = `<title>Reverse read: variant at base ${a.distR + 1}; first ~${READ_DEAD} bases usually unreadable</title>`;
@@ -2024,7 +2135,7 @@ function renderMap() {
     if (fGood) g += `<g>${fT}${arrow(fGood, yF, 1, 'var(--fwd)', a.fe + READ_GOOD <= v1, 4)}</g>`;
     if (rDead) g += `<g style="opacity:.3">${rT}${arrow(rDead, yR, -1, 'var(--rev)', false, 4)}</g>`;
     if (rGood) g += `<g>${rT}${arrow(rGood, yR, -1, 'var(--rev)', a.rs - READ_GOOD >= v0, 4)}</g>`;
-    note = `Forward read: variant at base ${a.distF + 1}. Reverse read: variant at base ${a.distR + 1}. The faded start of each read (~${READ_DEAD} bases) is usually unreadable.`;
+    note = `${q ? `Outer product ${p.a.product} bp, inner ${a.product} bp; reads are from the inner primers. ` : ''}Forward read: variant at base ${a.distF + 1}. Reverse read: variant at base ${a.distR + 1}. The faded start of each read (~${READ_DEAD} bases) is usually unreadable.`;
   } else {
     lab += `<text x="${L0}" y="${156 + dz}" style="fill:var(--muted);font:11px var(--f-body)">Select a primer pair to draw it here</text>`;
   }
@@ -2039,6 +2150,14 @@ function renderMap() {
 }
 
 /* ---------------- pairs table ---------------- */
+/* notes for a row: a nested set shows its inner pair's notes, then the outer pair's */
+function pairFlags(p) {
+  const own = (p.a && p.a.flags) || [];
+  if (!nested()) return own;
+  const q = innerOf(p);
+  const head = q ? q.a.flags.map(f => Object.assign({}, f, { text: 'Inner: ' + f.text })) : [{ level: 'bad', text: 'No inner pair fits inside this outer product' }];
+  return head.concat(own.map(f => Object.assign({}, f, { text: 'Outer: ' + f.text })));
+}
 const RISK = { high: ['bad', 'Likely'], moderate: ['warn', 'Possible'], unknown: ['warn', 'To review'], low: ['idle', 'Unlikely'] };
 function offSummary(off) {
   const hi = off.filter(o => o.risk === 'high').length, mo = off.filter(o => o.risk === 'moderate').length;
@@ -2089,17 +2208,29 @@ function renderPairs() {
     if (pb.status === 'fail') {
       body.innerHTML = `<div class="empty">Primer-BLAST did not return results (${esc(pb.error || 'unknown error')}).<div class="row" style="justify-content:center;margin-top:10px"><button class="btn small" id="pbRetry" type="button">Try again</button><button class="btn small" id="pbOpen" type="button">Open job in Primer-BLAST</button></div></div>`;
       $('pbRetry').onclick = () => { if (current) { current.ctl = new AbortController(); runPB(current.ctl, current.id); } };
-      $('pbOpen').onclick = () => PS.pbOpenForm(pb.fields || PS.pbFields(state.T, state.job, S));
+      $('pbOpen').onclick = () => PS.pbOpenForm(pb.fields || PS.pbFields(state.T, designJob(), designSettings()));
       return;
     }
     if (pb.status === 'done' && !pb.res.pairs.length) { body.innerHTML = `<div class="empty">${esc(pb.res.message || 'No pairs.')}</div>`; return; }
   }
   const list = state.tab === 'pb' ? ((pb.res && pb.res.pairs) || []) : state.local.pairs;
-  if (!list.length) { body.innerHTML = `<div class="empty">No pairs from ${state.tab === 'pb' ? 'Primer-BLAST' : 'local Primer3'}.</div>`; return; }
+  if (!list.length) { body.innerHTML = `<div class="empty">No ${nested() ? 'outer ' : ''}pairs from ${state.tab === 'pb' ? 'Primer-BLAST' : 'local Primer3'}.</div>`; return; }
   const rows = list.map((p, i) => {
-    const a = p.a || {};
+    const a = p.a || {}, all = pairFlags(p);
     const sel = state.sel && state.sel.src === p.source && state.sel.i === i;
-    const flags = (a.flags || []).slice(0, 3).map(f => `<span class="flag ${f.level === 'bad' ? 'bad' : ''}">${esc(f.text)}</span>`).join('') + ((a.flags || []).length > 3 ? `<span class="muted">+${a.flags.length - 3} more</span>` : '');
+    const flags = all.slice(0, 3).map(f => `<span class="flag ${f.level === 'bad' ? 'bad' : ''}">${esc(f.text)}</span>`).join('') + (all.length > 3 ? `<span class="muted">+${all.length - 3} more</span>` : '');
+    if (nested()) {
+      const q = innerOf(p), b = q ? q.a : {};
+      return `<tr class="pair" tabindex="0" data-i="${i}" aria-selected="${!!sel}">
+      <td class="num">${p.rank}</td>
+      <td class="seq"><span class="f">${esc(p.f)}</span><br><span class="r">${esc(p.r)}</span></td>
+      <td class="seq">${q ? `<span class="f">${esc(q.f)}</span><br><span class="r">${esc(q.r)}</span>` : '<span class="muted">None fits</span>'}</td>
+      <td class="num">${a.found ? a.product : '?'} / ${q ? b.product : '–'}</td>
+      <td class="num">${q ? `${b.distF + 1} / ${b.distR + 1}` : '–'}</td>
+      <td><div class="flags"><span>Outer ${specCell(p)}</span>${q ? `<span>Inner ${specCell(q)}</span>` : ''}</div></td>
+      <td><div class="flags">${flags || '<span class="muted">None</span>'}</div></td>
+    </tr>`;
+    }
     return `<tr class="pair" tabindex="0" data-i="${i}" aria-selected="${!!sel}">
       <td class="num">${p.rank}</td>
       <td class="seq"><span class="f">${esc(p.f)}</span><br><span class="r">${esc(p.r)}</span></td>
@@ -2110,7 +2241,11 @@ function renderPairs() {
       <td><div class="flags">${flags || '<span class="muted">None</span>'}</div></td>
     </tr>`;
   }).join('');
-  body.innerHTML = `<div class="tbl"><table>
+  const specTh = `<th>Specificity<button type="button" class="qlink" data-faq="faq-spec" title="What the specificity labels mean">?</button></th>`;
+  if (nested()) body.innerHTML = `<div class="tbl"><table>
+    <thead><tr><th>#</th><th>Outer F / R 5′→3′</th><th title="Sequencing primers, inside the outer product">Inner F / R 5′→3′</th><th>Product bp outer / inner</th><th title="Base number of the variant counted from each inner primer's 3′ end">Variant at base F / R</th>${specTh}<th>Notes</th></tr></thead>
+    <tbody>${rows}</tbody></table></div>`;
+  else body.innerHTML = `<div class="tbl"><table>
     <thead><tr><th>#</th><th>Forward / Reverse 5′→3′</th><th>Tm °C F / R</th><th>Product bp</th><th title="Base number of the variant counted from each primer's 3′ end">Variant at base F / R</th><th>Specificity<button type="button" class="qlink" data-faq="faq-spec" title="What the specificity labels mean">?</button></th><th>Notes</th></tr></thead>
     <tbody>${rows}</tbody></table></div>`;
   body.querySelectorAll('tr.pair').forEach(tr => {
@@ -2120,14 +2255,23 @@ function renderPairs() {
 }
 
 /* ---------------- pair detail ---------------- */
-function primerNames() { const b = baseName(state.v); return { f: `${b}-F`, r: `${b}-R` }; }
+function primerNames(role) {
+  const b = baseName(state.v), k = role === 'outer' ? '-out' : role === 'inner' ? '-in' : '';
+  return { f: `${b}${k}-F`, r: `${b}${k}-R` };
+}
+/* M13 tails go on the sequencing primers only: never on the outer pair of a nested design */
+const tailed = p => S.m13 && p.role !== 'outer';
 function orderLines(p) {
-  const n = primerNames();
-  const f = S.m13 ? PS.M13F + p.f : p.f, r = S.m13 ? PS.M13R + p.r : p.r;
-  return `${n.f}${S.m13 ? '-M13' : ''}\t${f}\t${f.length}\n${n.r}${S.m13 ? '-M13' : ''}\t${r}\t${r.length}`;
+  const one = pp => {
+    const n = primerNames(pp.role), t = tailed(pp);
+    const f = t ? PS.M13F + pp.f : pp.f, r = t ? PS.M13R + pp.r : pp.r;
+    return `${n.f}${t ? '-M13' : ''}\t${f}\t${f.length}\n${n.r}${t ? '-M13' : ''}\t${r}\t${r.length}`;
+  };
+  const q = innerOf(p);
+  return q ? one(p) + '\n' + one(q) : one(p);
 }
 function ampliconHTML(p) {
-  const T = state.T, a = p.a, thr = S.snpAF / 100;
+  const T = state.T, a = p.a, thr = S.snpAF / 100, q = innerOf(p), b = q && q.a;
   const snpAt = new Map();
   for (const s of state.ctx.snps) if (s.score >= thr) for (let t = s.t1; t <= s.t2; t++) snpAt.set(t, s);
   let html = '', curCls = null, curTitle = '', buf = '';
@@ -2135,8 +2279,10 @@ function ampliconHTML(p) {
   for (let t = a.fs; t <= a.re; t++) {
     let ch = T.seq[t - 1]; ch = T.exonic[t - 1] ? ch.toUpperCase() : ch.toLowerCase();
     const cls = [];
-    if (t >= a.fs && t <= a.fe) cls.push('pf');
-    else if (t >= a.rs && t <= a.re) cls.push('pr');
+    if (t >= a.fs && t <= a.fe) cls.push(q ? 'of' : 'pf');
+    else if (t >= a.rs && t <= a.re) cls.push(q ? 'or' : 'pr');
+    else if (q && t >= b.fs && t <= b.fe) cls.push('pf');
+    else if (q && t >= b.rs && t <= b.re) cls.push('pr');
     if (t >= T.vS && t <= T.vE) cls.push('vv');
     const sn = snpAt.get(t);
     if (sn && !(t >= T.vS && t <= T.vE)) cls.push('sn');
@@ -2155,86 +2301,102 @@ function ampliconText(p) {
 function renderDetail() {
   const p = selectedPair(), box = $('detail');
   if (!p || !p.a || !p.a.found) { box.hidden = true; return; }
-  const a = p.a, m = p.m || {}, v = state.v, n = primerNames();
+  const a = p.a, v = state.v, q = innerOf(p), rd = q || p;   // rd: the pair that is sequenced
   const srcName = p.source === 'pb' ? 'Primer-BLAST' : 'Local Primer3';
-  const specSrc = p.source === 'pb' ? p : (p.pbMatch || (p.pbCheck && p.pbCheck.pair));
-  const tailF = S.m13 ? `<span class="tail">${PS.M13F}</span>` : '', tailR = S.m13 ? `<span class="tail">${PS.M13R}</span>` : '';
+  const specOf = pp => pp.source === 'pb' ? pp : (pp.pbMatch || (pp.pbCheck && pp.pbCheck.pair));
   const cRange = (arr) => arr ? `c.${arr[0]} → c.${arr[1]}` : '';
   const hairWarn = x => x != null && x > 45 ? ' style="color:var(--warn)"' : '';
-  const card = (side) => {
-    const isF = side === 'f'; const seq = isF ? p.f : p.r;
-    const g = isF ? a.gF : a.gR;
-    return `<div class="pcard ${side}">
-      <div class="row" style="justify-content:space-between"><span class="pname">${esc(isF ? n.f : n.r)}</span><button class="btn small" type="button" data-copy="${side}">Copy</button></div>
-      <div class="pseq">${isF ? tailF : tailR}${esc(seq)}</div>
+  const card = (pp, side) => {
+    const isF = side === 'f', seq = isF ? pp.f : pp.r, m = pp.m || {}, pa = pp.a, n = primerNames(pp.role);
+    const g = isF ? pa.gF : pa.gR;
+    const tail = tailed(pp) ? `<span class="tail">${isF ? PS.M13F : PS.M13R}</span>` : '';
+    const where = pp.role === 'outer' && q ? `${isF ? q.a.fs - pa.fe - 1 : pa.rs - q.a.re - 1} bp from the inner primer` : `3′ end ${isF ? pa.distF : pa.distR} bp from the variant`;
+    return `<div class="pcard ${side}${pp.role === 'outer' ? ' outer' : ''}">
+      <div class="row" style="justify-content:space-between"><span class="pname">${esc(isF ? n.f : n.r)}</span><button class="btn small" type="button" data-copy="${pp.role === 'inner' ? 'i' : ''}${side}">Copy</button></div>
+      <div class="pseq">${tail}${esc(seq)}</div>
       <div class="stats">
         <div>Length<b>${seq.length}</b></div>
         <div>Tm °C<b>${fmt1(isF ? m.fTm : m.rTm)}</b></div>
         <div>GC %<b>${PS.gc(seq).toFixed(0)}</b></div>
         <div title="Hairpin melting temperature (thermodynamic)">Hairpin<b${hairWarn(isF ? m.fHair : m.rHair)}>${fmt1(isF ? m.fHair : m.rHair)}°</b></div>
       </div>
-      <p class="muted" style="font-size:12.5px;margin:8px 0 0">chr${esc(v.chr)}:${PS.nf(g[0])}-${PS.nf(g[1])}${v.tx ? ' · ' + esc(cRange(isF ? a.cFprim : a.cRprim)) : ''} · 3′ end ${isF ? a.distF : a.distR} bp from the variant · self-dimer ${fmt1(isF ? m.fSelf : m.rSelf)}°, 3′ self-dimer ${fmt1(isF ? m.fSelfEnd : m.rSelfEnd)}°</p>
+      <p class="muted" style="font-size:12.5px;margin:8px 0 0">chr${esc(v.chr)}:${PS.nf(g[0])}-${PS.nf(g[1])}${v.tx ? ' · ' + esc(cRange(isF ? pa.cFprim : pa.cRprim)) : ''} · ${where} · self-dimer ${fmt1(isF ? m.fSelf : m.rSelf)}°, 3′ self-dimer ${fmt1(isF ? m.fSelfEnd : m.rSelfEnd)}°</p>
     </div>`;
   };
-  let spec;
-  if (specSrc) {
-    const off = specSrc.offTargets;
-    const sm = off.length ? offSummary(off) : null;
-    const order = { high: 0, unknown: 1, moderate: 2, low: 3 };
-    const offSorted = off.slice().sort((x, y) => order[x.risk] - order[y.risk] || (x.length || 1e9) - (y.length || 1e9));
-    spec = off.length
-      ? `<p style="margin:0"><span class="pill ${sm.cls}" title="${esc(sm.tip)}">${sm.text}</span><button type="button" class="qlink" data-faq="faq-spec" title="What the specificity labels mean">?</button> <span class="muted">Primer-BLAST listed ${off.length} other product${off.length > 1 ? 's' : ''}. Graded by its own rule: a primer is specific against a site when it has at least 2 mismatches in its last 5 bases.</span></p>
-         <ul class="off">${offSorted.slice(0, 12).map(o => `<li><span class="pill ${RISK[o.risk][0]}">${RISK[o.risk][1]}</span> <span class="mono">${o.chr ? 'chr' + esc(o.chr) + ':' + PS.nf(o.from) + '-' + PS.nf(o.to) : esc(o.acc)}</span> · ${o.length || '?'} bp${o.length > Math.max(2000, S.ampMax) ? ' (long; amplifies poorly with short extension times)' : ''}${o.risk === 'unknown' ? ' · alignment not read; check it in Primer-BLAST' : ''} · ${o.primers.map(q => `${q.role === 'Forward' ? 'F' : 'R'} ${q.mm} mismatch${q.mm === 1 ? '' : 'es'}, ${q.mm3} in last 5`).join(' · ')}</li>`).join('')}${off.length > 12 ? `<li>…and ${off.length - 12} more</li>` : ''}</ul>`
-      : `<p style="margin:0"><span class="pill ok">Specific</span> <span class="muted">Primer-BLAST found ${specSrc.intended.length ? 'only the intended product' : 'no other product'} in ${esc(document.querySelector('#s_pbDb option:checked') ? document.querySelector('#s_pbDb option:checked').textContent : 'the database')}.</span></p>`;
-    // say where the intended product is, so a perfect match at the target is never mistaken for a missing hit
-    const own = specSrc.intended.filter(o => o.chr && o.from != null);
-    if (own.length) spec += `<p class="muted" style="font-size:12.5px;margin:8px 0 0">Your target: ${own.slice(0, 2).map(o => `<span class="mono">chr${esc(o.chr)}:${PS.nf(o.from)}-${PS.nf(o.to)}</span> · ${o.length || '?'} bp`).join('; ')}. Primer-BLAST found it too; PrimerScope recognised it as the intended product, so it is not listed above.</p>`;
-  } else if (p.pbCheck && p.pbCheck.running) spec = `<p style="margin:0"><span class="pill run"><span class="spin"></span> Checking with Primer-BLAST · <span id="chkClock">0:00</span></span></p>`;
-  else spec = `<p style="margin:0"><span class="pill idle">Not checked</span> <span class="muted">This pair has not been screened against the genome.</span></p>${p.pbCheck && p.pbCheck.error ? `<p class="muted" style="margin:6px 0 0">Last check: ${esc(p.pbCheck.error)}</p>` : ''}`;
-  const flags = (a.flags || []).map(f => `<div class="msg ${f.level === 'bad' ? 'bad' : 'warn'}">${esc(f.text)}</div>`).join('');
-  const snpRows = a.fSnps.concat(a.rSnps).filter(s => s.score >= 1e-4);
+  const specHTML = (pp, what) => {
+    const sp = specOf(pp), clock = pp.role === 'inner' ? 'chkClockIn' : 'chkClock';
+    if (sp) {
+      const off = sp.offTargets;
+      const sm = off.length ? offSummary(off) : null;
+      const order = { high: 0, unknown: 1, moderate: 2, low: 3 };
+      const offSorted = off.slice().sort((x, y) => order[x.risk] - order[y.risk] || (x.length || 1e9) - (y.length || 1e9));
+      const maxAmp = pairSettings(pp).ampMax;
+      let h = off.length
+        ? `<p style="margin:0">${what}<span class="pill ${sm.cls}" title="${esc(sm.tip)}">${sm.text}</span><button type="button" class="qlink" data-faq="faq-spec" title="What the specificity labels mean">?</button> <span class="muted">Primer-BLAST listed ${off.length} other product${off.length > 1 ? 's' : ''}. Graded by its own rule: a primer is specific against a site when it has at least 2 mismatches in its last 5 bases.</span></p>
+         <ul class="off">${offSorted.slice(0, 12).map(o => `<li><span class="pill ${RISK[o.risk][0]}">${RISK[o.risk][1]}</span> <span class="mono">${o.chr ? 'chr' + esc(o.chr) + ':' + PS.nf(o.from) + '-' + PS.nf(o.to) : esc(o.acc)}</span> · ${o.length || '?'} bp${o.length > Math.max(2000, maxAmp) ? ' (long; amplifies poorly with short extension times)' : ''}${o.risk === 'unknown' ? ' · alignment not read; check it in Primer-BLAST' : ''} · ${o.primers.map(x => `${x.role === 'Forward' ? 'F' : 'R'} ${x.mm} mismatch${x.mm === 1 ? '' : 'es'}, ${x.mm3} in last 5`).join(' · ')}</li>`).join('')}${off.length > 12 ? `<li>…and ${off.length - 12} more</li>` : ''}</ul>`
+        : `<p style="margin:0">${what}<span class="pill ok">Specific</span> <span class="muted">Primer-BLAST found ${sp.intended.length ? 'only the intended product' : 'no other product'} in ${esc(document.querySelector('#s_pbDb option:checked') ? document.querySelector('#s_pbDb option:checked').textContent : 'the database')}.</span></p>`;
+      // say where the intended product is, so a perfect match at the target is never mistaken for a missing hit
+      const own = sp.intended.filter(o => o.chr && o.from != null);
+      if (own.length) h += `<p class="muted" style="font-size:12.5px;margin:8px 0 0">Your target: ${own.slice(0, 2).map(o => `<span class="mono">chr${esc(o.chr)}:${PS.nf(o.from)}-${PS.nf(o.to)}</span> · ${o.length || '?'} bp`).join('; ')}. Primer-BLAST found it too; PrimerScope recognised it as the intended product, so it is not listed above.</p>`;
+      return h;
+    }
+    if (pp.pbCheck && pp.pbCheck.running) return `<p style="margin:0">${what}<span class="pill run"><span class="spin"></span> Checking with Primer-BLAST · <span id="${clock}">0:00</span></span></p>`;
+    const why = pp.role === 'inner' ? 'This pair has not been screened against the genome. It only meets the outer product, where Primer3 checked it.' : 'This pair has not been screened against the genome.';
+    return `<p style="margin:0">${what}<span class="pill idle">Not checked</span> <span class="muted">${why}</span></p>${pp.pbCheck && pp.pbCheck.error ? `<p class="muted" style="margin:6px 0 0">Last check: ${esc(pp.pbCheck.error)}</p>` : ''}`;
+  };
+  const canCheck = pp => !specOf(pp) && !(pp.pbCheck && pp.pbCheck.running);
+  const flags = pairFlags(p).map(f => `<div class="msg ${f.level === 'bad' ? 'bad' : 'warn'}">${esc(f.text)}</div>`).join('');
+  const snpRows = (q ? q.a.fSnps.concat(q.a.rSnps) : []).concat(a.fSnps, a.rSnps).filter(x => x.score >= 1e-4);
+  const ra = rd.a, rm = rd.m || {};
   box.innerHTML = `
     <div class="row" style="justify-content:space-between;margin-bottom:10px">
-      <h2 style="margin:0">Pair ${p.rank} · ${srcName}</h2>
+      <h2 style="margin:0">${nested() ? 'Set' : 'Pair'} ${p.rank} · ${srcName}${nested() ? ' outer pair' : ''}</h2>
       <div class="row">
         <button class="btn small" type="button" id="cpOrder">Copy order lines</button>
         <button class="btn small" type="button" id="dlCsv">Download CSV</button>
-        ${!specSrc && !(p.pbCheck && p.pbCheck.running) ? '<button class="btn small" type="button" id="chkPB">Check specificity</button>' : ''}
-        <button class="btn small" type="button" id="openPB">Open in Primer-BLAST</button>
+        ${canCheck(p) ? `<button class="btn small" type="button" id="chkPB">Check ${q ? 'outer ' : ''}specificity</button>` : ''}
+        ${q && canCheck(q) ? '<button class="btn small" type="button" id="chkPBin">Check inner specificity</button>' : ''}
+        <button class="btn small" type="button" id="openPB">Open${q ? ' outer pair' : ''} in Primer-BLAST</button>
         <a class="btn small" target="_blank" rel="noopener" href="${esc(ucscPcrUrl(p))}" title="Run both primers against hg38 in UCSC In-Silico PCR: a quick second opinion on specificity">UCSC In-Silico PCR</a>
         <a class="btn small" target="_blank" rel="noopener" href="https://genome.ucsc.edu/cgi-bin/hgTracks?db=hg38&amp;position=chr${esc(v.chr)}%3A${a.gAmp[0]}-${a.gAmp[1]}" title="Open the amplicon in the UCSC Genome Browser (repeats, segmental duplications, SNPs)">UCSC browser</a>
         ${v.chr !== 'MT' ? `<a class="btn small" target="_blank" rel="noopener" href="https://gnomad.broadinstitute.org/region/${esc(v.chr)}-${a.gAmp[0]}-${a.gAmp[1]}?dataset=gnomad_r4" title="All gnomAD v4 variants inside the amplicon">gnomAD region</a>` : ''}
       </div>
     </div>
-    <div class="primers">${card('f')}${card('r')}</div>
+    ${q ? `<p class="label" style="margin:0 0 6px">Outer pair · first PCR</p><div class="primers">${card(p, 'f')}${card(p, 'r')}</div>
+    <p class="label" style="margin:14px 0 6px">Inner pair · second PCR and sequencing</p><div class="primers">${card(q, 'f')}${card(q, 'r')}</div>`
+    : `<div class="primers">${card(p, 'f')}${card(p, 'r')}</div>`}
     <div class="kvline" style="margin:14px 0 6px">
-      <span>Product <b class="num">${a.product} bp</b></span>
-      <span>ΔTm <b class="num">${m.fTm != null ? Math.abs(m.fTm - m.rTm).toFixed(1) : '–'} °C</b></span>
-      <span>Pair dimer <b class="num">${fmt1(m.pairAny)}° / 3′ ${fmt1(m.pairEnd)}°</b></span>
-      <span>Variant at base <b class="num">${a.distF + 1}</b> of the F read, <b class="num">${a.distR + 1}</b> of the R read</span>
+      ${q ? `<span>Outer product <b class="num">${a.product} bp</b></span><span>Inner product <b class="num">${ra.product} bp</b></span>` : `<span>Product <b class="num">${a.product} bp</b></span>`}
+      <span>ΔTm${q ? ' inner' : ''} <b class="num">${rm.fTm != null ? Math.abs(rm.fTm - rm.rTm).toFixed(1) : '–'} °C</b></span>
+      <span>Pair dimer${q ? ' inner' : ''} <b class="num">${fmt1(rm.pairAny)}° / 3′ ${fmt1(rm.pairEnd)}°</b></span>
+      ${nested() && !q ? '' : `<span>Variant at base <b class="num">${ra.distF + 1}</b> of the F read, <b class="num">${ra.distR + 1}</b> of the R read</span>`}
     </div>
     <div class="kvline" style="margin-bottom:12px">
       <span class="mono">chr${esc(v.chr)}:${PS.nf(a.gAmp[0])}-${PS.nf(a.gAmp[1])}</span>
-      ${v.tx ? `<span>Covers <b class="mono">c.${esc(a.cFrom.label)}</b> (${esc(a.cFrom.region)}) to <b class="mono">c.${esc(a.cTo.label)}</b> (${esc(a.cTo.region)})</span>` : ''}
+      ${v.tx ? `<span>${q ? 'Outer product covers' : 'Covers'} <b class="mono">c.${esc(a.cFrom.label)}</b> (${esc(a.cFrom.region)}) to <b class="mono">c.${esc(a.cTo.label)}</b> (${esc(a.cTo.region)})</span>` : ''}
+      ${v.tx && q ? `<span>Inner product covers <b class="mono">c.${esc(ra.cFrom.label)}</b> to <b class="mono">c.${esc(ra.cTo.label)}</b></span>` : ''}
     </div>
-    ${spec}
+    ${specHTML(p, q ? 'Outer: ' : '')}
+    ${q ? `<div style="margin-top:10px">${specHTML(q, 'Inner: ')}</div>` : ''}
     ${flags ? `<div class="msgs" style="margin-top:10px">${flags}</div>` : ''}
-    ${snpRows.length ? `<p class="muted" style="font-size:12.5px;margin:10px 0 0">gnomAD variants under these primers (all below your threshold unless flagged): ${snpRows.map(s => `${esc(s.rs || s.id)} ${pct(s.score)}, ${s.from3} nt from 3′`).join(' · ')}</p>` : ''}
+    ${snpRows.length ? `<p class="muted" style="font-size:12.5px;margin:10px 0 0">gnomAD variants under these primers (all below your threshold unless flagged): ${snpRows.map(x => `${esc(x.rs || x.id)} ${pct(x.score)}, ${x.from3} nt from 3′`).join(' · ')}</p>` : ''}
     <div class="row" style="justify-content:space-between;margin:14px 0 6px">
-      <span class="label">Amplicon ${a.product} bp · exons uppercase, introns lowercase</span>
+      <span class="label">${q ? 'Outer amplicon' : 'Amplicon'} ${a.product} bp · exons uppercase, introns lowercase${q ? ' · outer primers underlined, inner highlighted' : ''}</span>
       <button class="btn small" type="button" id="cpAmp">Copy amplicon</button>
     </div>
     <div class="amp" id="ampseq">${ampliconHTML(p)}</div>`;
   box.hidden = false;
   box.querySelectorAll('[data-copy]').forEach(b => b.onclick = () => {
-    const isF = b.dataset.copy === 'f'; const s = isF ? p.f : p.r;
-    copy(S.m13 ? (isF ? PS.M13F : PS.M13R) + s : s, isF ? 'Forward primer' : 'Reverse primer');
+    const k = b.dataset.copy, pp = k[0] === 'i' ? q : p, isF = k.slice(-1) === 'f', sq = isF ? pp.f : pp.r;
+    const who = pp.role === 'outer' ? 'Outer ' : pp.role === 'inner' ? 'Inner ' : '';
+    copy(tailed(pp) ? (isF ? PS.M13F : PS.M13R) + sq : sq, who ? `${who}${isF ? 'forward' : 'reverse'} primer` : (isF ? 'Forward primer' : 'Reverse primer'));
   });
   $('cpOrder').onclick = () => copy(orderLines(p), 'Order lines');
   $('cpAmp').onclick = () => copy(ampliconText(p), 'Amplicon');
-  $('dlCsv').onclick = () => download(`${baseName(v)}_primers.csv`, csvAll(), 'text/csv');
-  $('openPB').onclick = () => PS.pbOpenForm(PS.pbFields(state.T, state.job, S, { checkF: p.f, checkR: p.r }));
+  $('dlCsv').onclick = () => download(`${baseName(v)}_${nested() ? 'nested_' : ''}primers.csv`, csvAll(), 'text/csv');
+  $('openPB').onclick = () => PS.pbOpenForm(PS.pbFields(state.T, state.job, pairSettings(p), { checkF: p.f, checkR: p.r }));
   const chk = $('chkPB'); if (chk) chk.onclick = () => checkPairSpecificity(p);
+  const chkIn = $('chkPBin'); if (chkIn) chkIn.onclick = () => checkPairSpecificity(q);
 }
 
 /* in-page Primer-BLAST check for one pair */
@@ -2242,9 +2404,9 @@ async function checkPairSpecificity(p) {
   const id = current && current.id; const ctl = current.ctl;
   p.pbCheck = { running: true, started: Date.now() };
   renderPairs(); renderDetail();
-  const tick = setInterval(() => { const c = $('chkClock'); if (c) c.textContent = fmtDur((Date.now() - p.pbCheck.started) / 1000); }, 1000);
+  const tick = setInterval(() => { const c = $(p.role === 'inner' ? 'chkClockIn' : 'chkClock'); if (c) c.textContent = fmtDur((Date.now() - p.pbCheck.started) / 1000); }, 1000);
   try {
-    const res = await pbShared(PS.pbFields(state.T, state.job, S, { checkF: p.f, checkR: p.r }), { v: state.v, T: state.T }, ctl.signal);
+    const res = await pbShared(PS.pbFields(state.T, state.job, pairSettings(p), { checkF: p.f, checkR: p.r }), { v: state.v, T: state.T }, ctl.signal);
     if (!current || current.id !== id) return;
     const q = res.pairs.find(x => x.f === p.f && x.r === p.r) || res.pairs[0];
     p.pbCheck = q ? { pair: q } : { error: res.message || 'Primer-BLAST returned no result for this pair.' };
@@ -2259,21 +2421,33 @@ function ucscPcrUrl(p) {
 }
 
 function csvAll() {
-  const v = state.v, n = primerNames();
-  const rows = [['source', 'rank', 'name_F', 'seq_F', 'name_R', 'seq_R', 'len_F', 'len_R', 'Tm_F', 'Tm_R', 'GC_F', 'GC_R', 'product_bp', 'F_genomic', 'R_genomic', 'amplicon_genomic', 'amplicon_c_from', 'amplicon_c_to', 'variant_base_in_F_read', 'variant_base_in_R_read', 'specificity', 'notes']];
-  const add = (p) => {
-    const a = p.a || {}, m = p.m || {};
-    const sp = p.source === 'pb' ? p : (p.pbMatch || (p.pbCheck && p.pbCheck.pair));
-    const spec = sp ? (sp.offTargets.length ? offSummary(sp.offTargets).text : 'specific') : 'not checked';
-    const f = S.m13 ? PS.M13F + p.f : p.f, r = S.m13 ? PS.M13R + p.r : p.r;
-    rows.push([p.source === 'pb' ? 'Primer-BLAST' : 'Primer3 local', p.rank, n.f, f, n.r, r, p.f.length, p.r.length, fmt1(m.fTm), fmt1(m.rTm), PS.gc(p.f).toFixed(1), PS.gc(p.r).toFixed(1), a.product,
+  const v = state.v;
+  const q = x => { x = String(x == null ? '' : x); return /[",\n]/.test(x) ? `"${x.replace(/"/g, '""')}"` : x; };
+  const specText = p => { const sp = p.source === 'pb' ? p : (p.pbMatch || (p.pbCheck && p.pbCheck.pair)); return sp ? (sp.offTargets.length ? offSummary(sp.offTargets).text : 'specific') : 'not checked'; };
+  // one pair's columns: names, sequences (tailed when ordered with M13), chemistry, positions
+  const cols = p => {
+    const a = p.a || {}, m = p.m || {}, n = primerNames(p.role), t = tailed(p);
+    return [n.f, t ? PS.M13F + p.f : p.f, n.r, t ? PS.M13R + p.r : p.r, p.f.length, p.r.length, fmt1(m.fTm), fmt1(m.rTm), PS.gc(p.f).toFixed(1), PS.gc(p.r).toFixed(1), a.product,
       a.found ? `chr${v.chr}:${a.gF[0]}-${a.gF[1]}` : '', a.found ? `chr${v.chr}:${a.gR[0]}-${a.gR[1]}` : '', a.found ? `chr${v.chr}:${a.gAmp[0]}-${a.gAmp[1]}` : '',
-      a.cFrom ? 'c.' + a.cFrom.label : '', a.cTo ? 'c.' + a.cTo.label : '', a.found ? a.distF + 1 : '', a.found ? a.distR + 1 : '', spec, (a.flags || []).map(x => x.text).join('; ')]);
+      a.cFrom ? 'c.' + a.cFrom.label : '', a.cTo ? 'c.' + a.cTo.label : ''];
+  };
+  const pairHead = pre => ['name_F', 'seq_F', 'name_R', 'seq_R', 'len_F', 'len_R', 'Tm_F', 'Tm_R', 'GC_F', 'GC_R', 'product_bp', 'F_genomic', 'R_genomic', 'amplicon_genomic', 'amplicon_c_from', 'amplicon_c_to'].map(k => pre + k);
+  const rows = [nested()
+    ? ['source', 'rank', ...pairHead('outer_'), ...pairHead('inner_'), 'variant_base_in_F_read', 'variant_base_in_R_read', 'outer_specificity', 'inner_specificity', 'notes']
+    : ['source', 'rank', ...pairHead(''), 'variant_base_in_F_read', 'variant_base_in_R_read', 'specificity', 'notes']];
+  const add = (p) => {
+    const src = p.source === 'pb' ? 'Primer-BLAST' : 'Primer3 local', notes = pairFlags(p).map(x => x.text).join('; ');
+    if (nested()) {
+      const i = innerOf(p);
+      rows.push([src, p.rank, ...cols(p), ...(i ? cols(i) : pairHead('').map(() => '')), i ? i.a.distF + 1 : '', i ? i.a.distR + 1 : '', specText(p), i ? specText(i) : '', notes]);
+    } else {
+      const a = p.a || {};
+      rows.push([src, p.rank, ...cols(p), a.found ? a.distF + 1 : '', a.found ? a.distR + 1 : '', specText(p), notes]);
+    }
   };
   ((state.pb.res && state.pb.res.pairs) || []).forEach(add);
   state.local.pairs.forEach(add);
-  const q = x => { x = String(x == null ? '' : x); return /[",\n]/.test(x) ? `"${x.replace(/"/g, '""')}"` : x; };
-  return `# PrimerScope · ${v.input} · ${v.gText} · ${new Date().toISOString().slice(0, 10)}\n` + rows.map(r => r.map(q).join(',')).join('\n') + '\n';
+  return `# PrimerScope${nested() ? ' nested PCR' : ''} · ${v.input} · ${v.gText} · ${new Date().toISOString().slice(0, 10)}\n` + rows.map(r => r.map(q).join(',')).join('\n') + '\n';
 }
 
 /* ---------------- boot ---------------- */
@@ -2290,7 +2464,22 @@ $('themeBtn').onclick = () => {
   syncThemeBtn();
 };
 syncThemeBtn();
-$('ampPresets').querySelectorAll('.chip').forEach(c => c.onclick = () => { $('s_ampMin').value = c.dataset.min; $('s_ampMax').value = c.dataset.max; readSettings(); toast(`Amplicon ${c.dataset.min}–${c.dataset.max} bp; press Design primers to apply`); });
+function syncMode() {
+  $('modeTabs').querySelectorAll('.tab').forEach(b => b.setAttribute('aria-selected', String(b.dataset.mode === mode)));
+  $('nestBox').hidden = mode !== 'nested';
+  $('ampLabel').textContent = mode === 'nested' ? 'Inner amplicon (sequenced)' : 'Amplicon size';
+  $('go').textContent = mode === 'nested' ? 'Design nested primers' : 'Design primers';
+  if (!state) initSteps();   // step labels follow the mode until a design is on screen
+}
+$('modeTabs').querySelectorAll('.tab').forEach(b => b.onclick = () => {
+  if (mode === b.dataset.mode) return;
+  mode = b.dataset.mode; try { localStorage.setItem('primerscope.mode', mode); } catch (e) {}
+  syncMode();
+  if (state && state.T) toast(`${mode === 'nested' ? 'Nested PCR' : 'Sanger'} mode; press ${$('go').textContent} to apply`);
+});
+syncMode();
+$('outerPresets').querySelectorAll('.chip').forEach(c => c.onclick = () => { $('s_outerMin').value = c.dataset.min; $('s_outerMax').value = c.dataset.max; readSettings(); toast(`Outer amplicon ${c.dataset.min}–${c.dataset.max} bp; press ${$('go').textContent} to apply`); });
+$('ampPresets').querySelectorAll('.chip').forEach(c => c.onclick = () => { $('s_ampMin').value = c.dataset.min; $('s_ampMax').value = c.dataset.max; readSettings(); toast(`${mode === 'nested' ? 'Inner amplicon' : 'Amplicon'} ${c.dataset.min}–${c.dataset.max} bp; press ${$('go').textContent} to apply`); });
 $('mapZoom').querySelectorAll('button').forEach(b => b.onclick = () => { mapZoom = b.dataset.zoom; try { localStorage.setItem('primerscope.mapzoom', mapZoom); } catch (e) {} if (state && state.T) renderMap(); });
 function openFaq(id) {
   const d = $('faq');
@@ -2300,7 +2489,7 @@ function openFaq(id) {
 document.addEventListener('click', e => { const b = e.target.closest('[data-faq]'); if (b) { e.preventDefault(); e.stopPropagation(); openFaq(b.dataset.faq); } }, true);
 $('faqClose').onclick = () => $('faq').close();
 $('faq').addEventListener('click', e => { if (e.target === $('faq')) $('faq').close(); });
-document.querySelectorAll('#settingsBox input, #settingsBox select, #s_ampMin, #s_ampMax').forEach(el => el.addEventListener('change', () => { const p = readSettings(); if (!p.length && state && state.T && el.id === 's_m13') renderDetail(); }));
+document.querySelectorAll('#settingsBox input, #settingsBox select, #s_ampMin, #s_ampMax, #nestBox input').forEach(el => el.addEventListener('change', () => { const p = readSettings(); if (!p.length && state && state.T && el.id === 's_m13') renderDetail(); }));
 })();
 
 </script>
