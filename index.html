@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>PrimerScope</title>
 <script>try { document.documentElement.dataset.theme = localStorage.getItem('primerscope.theme') || 'dark'; } catch (e) { document.documentElement.dataset.theme = 'dark'; }</script>
-<meta name="description" content="Design Sanger sequencing and nested PCR primers around a single human variant (GRCh38) with Primer3 and NCBI Primer-BLAST.">
+<meta name="description" content="Design Sanger sequencing and nested PCR primers around a single human variant (GRCh38) with Primer3 and NCBI Primer-BLAST, and check any primer or sequence for dbSNP and gnomAD variants.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Geist:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
@@ -234,6 +234,26 @@ footer{margin-top:28px;font-size:12.5px;color:var(--muted);border-top:1px solid 
 .spin{display:inline-block;width:12px;height:12px;border:2px solid var(--line-strong);border-top-color:var(--rev);border-radius:50%;animation:sp 0.9s linear infinite;vertical-align:-1px}
 @keyframes sp{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.spin{animation:none}}
+/* check primers tab */
+.vin textarea{width:100%;font-family:var(--f-mono);font-size:13.5px;line-height:1.5;padding:10px 12px;border:1px solid var(--line-strong);border-radius:var(--r-sm);background:var(--sunk);resize:vertical;min-height:120px}
+.vin textarea:focus{border-color:var(--fwd);outline:none;box-shadow:0 0 0 3px var(--fwd-soft)}
+.view{display:flex;flex-direction:column;gap:16px;min-width:0}
+#cpipe{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media (max-width:760px){#cpipe{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.ckseq{font-family:var(--f-mono);font-size:15px;letter-spacing:.04em;line-height:1.9;word-break:break-all;background:var(--sunk);border:1px solid var(--line);border-radius:var(--r-sm);padding:8px 12px;max-height:260px;overflow:auto}
+.ckseq .end{color:var(--muted);font-size:12px;letter-spacing:0}
+.ckseq .k3{box-shadow:inset 0 -2px 0 var(--line-strong)}
+.ckseq .vb{background:var(--var);color:var(--btn-ink);font-weight:600;border-radius:2px}
+.ckseq .vw{background:var(--warn-soft);color:var(--warn);font-weight:600;text-decoration:underline;text-underline-offset:3px}
+.ckseq .vi{text-decoration:underline dotted var(--muted);text-underline-offset:4px}
+.ckseq .mm{color:var(--bad);text-decoration:line-through}
+.ckseq .gap{color:var(--muted)}
+.ckseq.long{font-size:12.5px;letter-spacing:0;line-height:1.75}
+.ckhead{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.ckhead h2{margin:0}
+.ckmeta{display:flex;flex-wrap:wrap;gap:4px 18px;font-size:13.5px;margin:8px 0}
+td.lvl-bad{border-left:3px solid var(--bad)} td.lvl-warn{border-left:3px solid var(--warn)} td.lvl-info{border-left:3px solid var(--line)}
+details.more>summary{cursor:pointer;color:var(--muted);font-size:13px;margin-top:8px}
 .toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:999px;font-size:13.5px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9}
 .toast.on{opacity:1}
 </style>
@@ -249,7 +269,7 @@ footer{margin-top:28px;font-size:12.5px;color:var(--muted);border-top:1px solid 
       </svg>
       <div>
         <h1>PrimerScope</h1>
-        <p>Sanger and nested PCR primers around one variant · GRCh38 · Primer3 + Primer-BLAST</p>
+        <p>Sanger and nested PCR primers around one variant, SNP check of any primer · GRCh38 · Primer3 + Primer-BLAST · dbSNP + gnomAD</p>
       </div>
     </div>
     <nav class="links">
@@ -267,10 +287,18 @@ footer{margin-top:28px;font-size:12.5px;color:var(--muted);border-top:1px solid 
           <div class="tabs modetabs" role="tablist" id="modeTabs" aria-label="Design mode">
             <button type="button" class="tab" role="tab" data-mode="sanger">Sanger</button>
             <button type="button" class="tab" role="tab" data-mode="nested">Nested PCR</button>
+            <button type="button" class="tab" role="tab" data-mode="check">Check primers</button>
           </div>
-          <label class="label" for="vinput">Variant</label>
-          <input id="vinput" name="vinput" spellcheck="false" placeholder="NM_004183.4:c.652C>T" value="NM_004183.4:c.652C>T">
-          <div class="ampsz">
+          <div class="vin" data-for="check" hidden>
+            <label class="label" for="ckSeqs">Primers or sequences <button type="button" class="qlink" data-faq="faq-checksnp" title="How the SNP check works">?</button></label>
+            <textarea id="ckSeqs" rows="6" spellcheck="false" placeholder="HBB-F  CCCCTTCCTATGACATGAACTTAA&#10;HBB-R  GGTGCATCTGACTCCTGAGGAGA"></textarea>
+            <label class="label" for="ckLocus">Near (optional)</label>
+            <input id="ckLocus" spellcheck="false" placeholder="HBB, chr11:5225000-5230000 or a variant">
+            <p class="fmt">One sequence per line, a name before it optional, or FASTA. Up to 20 sequences of 12–5,000 nt; M13 tails are removed. With a gene, region or variant in <i>Near</i>, sequences are searched there (±5 kb). Left empty, UCSC BLAT places them genome-wide (≥20 nt). Flagged at AF ≥ <b id="ckThr"></b>, set under Design settings → Population variants.</p>
+          </div>
+          <label class="label" for="vinput" data-for="design">Variant</label>
+          <input id="vinput" data-for="design" name="vinput" spellcheck="false" placeholder="NM_004183.4:c.652C>T" value="NM_004183.4:c.652C>T">
+          <div class="ampsz" data-for="design">
             <span class="label"><span id="ampLabel">Amplicon size</span> <button type="button" class="qlink" data-faq="faq-size" title="How the amplicon size works">?</button></span>
             <div class="sgrid">
               <label class="field"><span>Min bp</span><input id="s_ampMin" type="number" min="100" max="5000"></label>
@@ -297,7 +325,11 @@ footer{margin-top:28px;font-size:12.5px;color:var(--muted);border-top:1px solid 
             <p class="fmt">The outer pair amplifies the locus and is checked genome-wide by Primer-BLAST. The inner pair sits inside the outer product and is the one you sequence with.</p>
           </div>
           <button class="btn primary" id="go" type="submit">Design primers</button>
-          <div class="chips" id="examples" aria-label="Examples">
+          <div class="chips" id="ckExamples" aria-label="Examples" data-for="check" hidden>
+            <button type="button" class="chip" data-seqs="HBB-F  CCCCTTCCTATGACATGAACTTAA&#10;HBB-R  GGTGCATCTGACTCCTGAGGAGA" data-locus="">HBB pair, genome-wide (BLAT)</button>
+            <button type="button" class="chip" data-seqs="&gt;HBB-F&#10;CCCCTTCCTATGACATGAACTTAA&#10;&gt;HBB-R&#10;GGTGCATCTGACTCCTGAGGAGA&#10;&gt;HBB-ex2-R&#10;ACATTTGCTTCTGACACAACTGTG" data-locus="HBB">HBB, near the gene</button>
+          </div>
+          <div class="chips" id="examples" aria-label="Examples" data-for="design">
             <button type="button" class="chip">BEST1 c.867+97G>A</button>
             <button type="button" class="chip">HBB c.20A>T</button>
             <button type="button" class="chip">NM_000500.9:c.844G>T</button>
@@ -305,7 +337,7 @@ footer{margin-top:28px;font-size:12.5px;color:var(--muted);border-top:1px solid 
             <button type="button" class="chip">chr4:1804392G>A</button>
             <button type="button" class="chip">rs6474</button>
           </div>
-          <p class="fmt">Accepts <code>NM_…:c.</code>, <code>GENE c.</code>, intronic <code>c.867+97</code>, UTR <code>c.-77</code>/<code>c.*45</code>, <code>del/dup/ins/delins</code>, <code>chr11:61957402C>T</code>, <code>NC_…:g.</code>, <code>11-61957402-C-T</code> and <code>rs</code> IDs. Gene symbols use the MANE Select transcript.</p>
+          <p class="fmt" data-for="design">Accepts <code>NM_…:c.</code>, <code>GENE c.</code>, intronic <code>c.867+97</code>, UTR <code>c.-77</code>/<code>c.*45</code>, <code>del/dup/ins/delins</code>, <code>chr11:61957402C>T</code>, <code>NC_…:g.</code>, <code>11-61957402-C-T</code> and <code>rs</code> IDs. Gene symbols use the MANE Select transcript.</p>
         </form>
       </section>
 
@@ -372,6 +404,24 @@ footer{margin-top:28px;font-size:12.5px;color:var(--muted);border-top:1px solid 
     </aside>
 
     <main class="sheet" id="sheet">
+      <div class="view" id="checkView" hidden>
+        <div class="pipe" id="cpipe"></div>
+        <div class="msgs" id="cmsgs"></div>
+        <section class="panel" id="cintro">
+          <h2>How the primer check runs</h2>
+          <div class="how">
+            <div><b>Place</b>Finds each sequence on GRCh38: exactly (or with up to 2 mismatches) near the gene, region or variant you give, or genome-wide with UCSC BLAT.</div>
+            <div><b>dbSNP</b>Lists every dbSNP record under the primer through NCBI, with its minor allele frequency from ALFA, gnomAD, TOPMed or 1000 Genomes and its ClinVar significance. Ensembl is the fallback.</div>
+            <div><b>gnomAD v4</b>Adds gnomAD v4 exome + genome frequencies, including the highest population frequency, and variants that have no rsID yet.</div>
+            <div><b>3′ end</b>A variant at or above your frequency threshold in the last 5 bases of a primer is red: it can stop extension and cause allele dropout.</div>
+            <div><b>Elsewhere</b>Frequent variants elsewhere in the primer are amber. Rarer ones are listed for information.</div>
+            <div><b>Pairs</b>Primers that face each other within 5 kb are reported as a pair with their product size.</div>
+          </div>
+        </section>
+        <section class="panel" id="csummary" hidden></section>
+        <div class="view" id="cresults"></div>
+      </div>
+      <div class="view" id="designView">
       <div class="pipe" id="pipe"></div>
       <div class="msgs" id="msgs"></div>
 
@@ -416,6 +466,7 @@ footer{margin-top:28px;font-size:12.5px;color:var(--muted);border-top:1px solid 
         <div id="pairsbody"></div>
       </section>
       <section class="panel" id="detail" hidden></section>
+      </div>
       <section class="panel" id="logpanel" hidden>
         <details class="log"><summary>Run log</summary><div class="logbody" id="log"></div></details>
       </section>
@@ -423,7 +474,7 @@ footer{margin-top:28px;font-size:12.5px;color:var(--muted);border-top:1px solid 
   </div>
 
   <footer>
-    <span>Data: NCBI Datasets and E-utilities (GRCh38.p14), dbSNP, gnomAD v4, Ensembl repeat annotation, UCSC Genome Browser API (segmental duplications; RepeatMasker and dbSNP 155 common as fallbacks), VariantValidator. Design: Primer3 2.6.1 compiled to WebAssembly; specificity: NCBI Primer-BLAST.</span>
+    <span>Data: NCBI Datasets and E-utilities (GRCh38.p14), dbSNP, gnomAD v4, Ensembl repeat annotation, UCSC Genome Browser API (segmental duplications; RepeatMasker and dbSNP 155 common as fallbacks), UCSC BLAT, Ensembl Variation, VariantValidator. Design: Primer3 2.6.1 compiled to WebAssembly; specificity: NCBI Primer-BLAST.</span>
     <span>Primer-BLAST has no official API; this page submits to its public web form the same way the website does. Designs are predictions: confirm each pair by PCR and a test sequencing run before clinical use.</span>
   </footer>
 </div>
@@ -492,6 +543,20 @@ footer{margin-top:28px;font-size:12.5px;color:var(--muted);border-top:1px solid 
         <li>The inner pair only meets the outer product, so the specificity that matters is inside that product, and Primer3 checks it there. Press <b>Check inner specificity</b> on a set to screen the inner pair against the genome too.</li>
       </ul>
       <p>The map draws the outer pair on the OUTER row, the inner pair on the INNER row, and the reads from the inner primers. In the amplicon sequence, the outer primers are underlined and the inner primers highlighted.</p>
+    </details>
+
+    <details id="faq-checksnp">
+      <summary>How does the Check primers tab work?</summary>
+      <p>It checks primers or sequences you already have, for example from a paper, an old protocol or another tool, for known variants under them.</p>
+      <ul>
+        <li><b>Input</b>: one sequence per line, with an optional name before it (<code>HBB-F ACATTTGC…</code>), or FASTA. M13(-21) and M13 reverse tails are recognised and removed, because they do not bind the genome.</li>
+        <li><b>Placing</b>: with a gene, region or variant in <i>Near</i>, each sequence is searched on both strands within ±5 kb of it: exactly, or else with up to 2 mismatches (about 3% for longer sequences). Without one, UCSC BLAT places it genome-wide. BLAT needs at least 20 nt and UCSC allows one BLAT search every 15 seconds, so later sequences are first searched near the earlier hits. A mismatch against the reference is shown struck through in red.</li>
+        <li><b>dbSNP</b>: every dbSNP record at the bases the primer covers, read from NCBI. The frequency shown is the highest minor allele frequency among the large studies (ALFA, gnomAD, TOPMed, 1000 Genomes, ExAC, GO-ESP). Frequencies from small studies are shown separately and do not trigger a flag. If NCBI does not answer, Ensembl Variation (built from dbSNP) is used, without frequencies.</li>
+        <li><b>gnomAD v4</b>: exome and genome counts combined, and the highest population frequency, as in the design tabs. It also catches variants that have no rsID yet.</li>
+        <li><b>Flags</b> use the threshold in Design settings → Population variants (default 0.1%), against the higher of the dbSNP and gnomAD frequencies. <span class="pill bad">3′ end</span> means a variant at or above it in the last 5 bases of a primer (up to 60 nt). <span class="pill warn">SNP</span> means one elsewhere in the sequence. Variants without any frequency, often large deletions from ClinVar, are listed but not flagged.</li>
+        <li><b>Pairs</b>: two sequences on opposite strands that face each other within 5 kb are listed as a pair with their product size.</li>
+      </ul>
+      <p>On a designed pair, <b>Check SNPs</b> opens this tab with that pair filled in.</p>
     </details>
 
     <details id="faq-segdup">
@@ -1582,6 +1647,289 @@ PS.pbOpenForm = function (fields) {
   document.body.appendChild(form); form.submit(); setTimeout(() => form.remove(), 1000);
 };
 
+/* ================= Check primers: SNPs under user-supplied primers or sequences ================= */
+PS.CHECK_MAX_SEQS = 20;
+PS.CHECK_MAX_LEN = 5000;
+PS.CHECK_PRIMER_LEN = 60;   // up to this length a sequence is treated as a primer (3′-end rules apply)
+
+/* Paste formats: FASTA, "name<tab|comma|space>SEQ" lines, or bare sequences (one per line).
+   5′-/-3′ decorations and spaces inside a sequence are ignored; M13 tails are recognised and stripped. */
+PS.parseSeqs = function (text) {
+  const seqs = [], errors = [];
+  const clean = s => s.replace(/5['′’]\s*-?|-?\s*3['′’]/g, ' ');
+  const isNt = t => /^[ACGTNacgtn]+$/.test(t);
+  const add = (name, seq, where) => {
+    seq = seq.toUpperCase();
+    if (!seq) return;
+    if (/[^ACGTN]/.test(seq)) { errors.push(`${where}: only A, C, G, T and N are accepted.`); return; }
+    const notes = [];
+    for (const [tail, label] of [[PS.M13F, 'M13(-21)'], [PS.M13R, 'M13 reverse']]) {
+      if (seq.length >= tail.length + 12 && seq.startsWith(tail)) { seq = seq.slice(tail.length); notes.push(`${label} tail removed before the check`); break; }
+    }
+    if (seq.length < 12) { errors.push(`${where}: ${seq.length} nt is too short to place on the genome (minimum 12).`); return; }
+    if (seq.length > PS.CHECK_MAX_LEN) { errors.push(`${where}: ${PS.nf(seq.length)} nt is longer than the ${PS.nf(PS.CHECK_MAX_LEN)} nt limit.`); return; }
+    seqs.push({ name: name || `Seq ${seqs.length + 1}`, seq, notes });
+  };
+  const lines = String(text || '').split(/\r?\n/);
+  let fa = null;
+  lines.forEach((line, li) => {
+    const where = `Line ${li + 1}`;
+    if (/^\s*>/.test(line)) { if (fa) add(fa.name, fa.seq, fa.where); fa = { name: line.replace(/^\s*>\s*/, '').trim(), seq: '', where }; return; }
+    const l = clean(line).trim();
+    if (fa) {   // a FASTA record runs until a blank line or a line that is not sequence
+      if (l && /^[ACGTN\s]+$/i.test(l)) { fa.seq += l.replace(/\s+/g, ''); return; }
+      add(fa.name, fa.seq, fa.where); fa = null;
+    }
+    if (!l) return;
+    const toks = l.split(/[\t,;]+|\s+/).filter(Boolean);
+    // the sequence is the run of nucleotide-only tokens at the end; anything before it is the name
+    let k = toks.length;
+    while (k > 0 && isNt(toks[k - 1])) k--;
+    if (k === toks.length) { errors.push(`${where}: no sequence found in "${l.slice(0, 40)}".`); return; }
+    if (k === 0 && toks.length > 1 && toks[0].length < 8) k = 1;   // "CAT ACGT…": a short first token is a name
+    add(toks.slice(0, k).join(' '), toks.slice(k).join(''), where);
+  });
+  if (fa) add(fa.name, fa.seq, fa.where);
+  if (seqs.length > PS.CHECK_MAX_SEQS) { errors.push(`Check at most ${PS.CHECK_MAX_SEQS} sequences at a time (${seqs.length} given).`); seqs.length = PS.CHECK_MAX_SEQS; }
+  return { seqs, errors };
+};
+
+/* Gene span from NCBI Gene (whole gene, all transcripts) */
+PS.geneSpan = async function (symbol, signal) {
+  const s = await req(`${PS.EUTILS}esearch.fcgi?db=gene&retmode=json&retmax=20&tool=primerscope&term=${encodeURIComponent(`${symbol}[sym] AND human[orgn] AND alive[prop]`)}`, { label: `NCBI Gene ${symbol}`, signal, ncbi: true });
+  const ids = (s.esearchresult && s.esearchresult.idlist) || [];
+  if (!ids.length) throw new Error(`Gene ${symbol} was not found at NCBI.`);
+  const sum = await req(`${PS.EUTILS}esummary.fcgi?db=gene&retmode=json&tool=primerscope&id=${ids.join(',')}`, { label: 'NCBI Gene summaries', signal, ncbi: true });
+  const recs = sum.result.uids.map(id => sum.result[id]);
+  const r = recs.find(x => (x.name || '').toUpperCase() === symbol.toUpperCase()) || recs[0];
+  const gi = (r.genomicinfo || []).find(g => g.chraccver && PS.ACC2CHR[g.chraccver.split('.')[0]]);
+  if (!gi) throw new Error(`${symbol} has no GRCh38 primary-chromosome location.`);
+  const chr = PS.ACC2CHR[gi.chraccver.split('.')[0]];
+  return { chr, a: Math.min(+gi.chrstart, +gi.chrstop) + 1, b: Math.max(+gi.chrstart, +gi.chrstop) + 1, symbol: r.name };
+};
+
+/* Locus box: a gene symbol, a region (chr11:5225000-5230000), or any variant format the design tabs accept */
+PS.resolveLocus = async function (text, signal, pad = 5000) {
+  const s = (text || '').trim();
+  let chr, a, b, label;
+  if (/^[A-Za-z][A-Za-z0-9-]*$/.test(s) && !/^rs\d+$/i.test(s) && !/^(chr)?([0-9]{1,2}|X|Y|MT?)$/i.test(s)) {
+    const g = await PS.geneSpan(s, signal);
+    ({ chr, a, b } = g); label = `${g.symbol} (chr${chr}:${PS.nf(a)}-${PS.nf(b)})`;
+  } else {
+    let p;
+    try { p = PS.parseInput(s); } catch (e) { throw new Error(`Locus "${s}": ${e.message.replace(/^Enter a variant\.$/, 'empty')} A gene symbol (HBB) or a region (chr11:5225000-5230000) also works.`); }
+    if (p.kind === 'g') { chr = p.chr; a = p.gStart; b = p.gEnd; }
+    else if (p.kind === 'rs') { const r = await PS.rsLookup(p.id, signal); chr = r.chr; a = r.start; b = r.end; }
+    else { const r = await PS.resolveTranscript(p, signal); const g1 = PS.cToG(r.tx, p.start), g2 = PS.cToG(r.tx, p.end); chr = r.tx.chr; a = Math.min(g1, g2); b = Math.max(g1, g2); }
+    label = `${s} (chr${chr}:${PS.nf(a)}${b !== a ? '-' + PS.nf(b) : ''})`;
+  }
+  const A = Math.max(1, a - pad), B = b + pad;
+  if (B - A + 1 > 3e6) throw new Error(`The locus spans ${(B - A + 1) / 1e6 >= 10 ? Math.round((B - A + 1) / 1e6) : ((B - A + 1) / 1e6).toFixed(1)} Mb; give a region or gene under 3 Mb.`);
+  return { chr, acc: PS.CHR2ACC[chr], a: A, b: B, label, pad };
+};
+
+/* Find a sequence in a fetched plus-strand region, on both strands.
+   Exact matches first; if none, up to 2 mismatches for primers, or ~3% (ungapped, seeded) for longer sequences. */
+PS.findInRegion = function (q, plus, offset, maxHits = 50) {
+  const n = q.length, hits = [];
+  const mk = (strand, j) => {
+    const qmap = new Array(n);
+    for (let k = 0; k < n; k++) { const i = strand > 0 ? k : n - 1 - k; qmap[i] = offset + j + k; }
+    return { strand, g1: offset + j, g2: offset + j + n - 1, qmap };
+  };
+  const pats = [[1, q], [-1, PS.revcomp(q)]];
+  for (const [strand, p] of pats) {
+    let j = plus.indexOf(p);
+    while (j >= 0 && hits.length < maxHits) { hits.push(mk(strand, j)); j = plus.indexOf(p, j + 1); }
+  }
+  if (hits.length) return hits;
+  const maxMm = n <= PS.CHECK_PRIMER_LEN ? 2 : Math.max(2, Math.floor(n * 0.03));
+  const cmp = (p, j) => { let mm = 0; for (let k = 0; k < p.length; k++) { const c = p[k]; if (c !== 'N' && plus[j + k] !== c && ++mm > maxMm) return mm; } return mm; };
+  for (const [strand, p] of pats) {
+    if (n <= PS.CHECK_PRIMER_LEN) {
+      for (let j = 0; j + n <= plus.length && hits.length < maxHits; j++) if (cmp(p, j) <= maxMm) hits.push(mk(strand, j));
+    } else {
+      const seen = new Set();
+      for (const off of [0, Math.floor((n - 20) / 2), n - 20]) {
+        const seed = p.substr(off, 20); if (/N/.test(seed)) continue;
+        let j = plus.indexOf(seed);
+        while (j >= 0 && hits.length < maxHits) { const st = j - off; if (st >= 0 && st + n <= plus.length && !seen.has(st)) { seen.add(st); if (cmp(p, st) <= maxMm) hits.push(mk(strand, st)); } j = plus.indexOf(seed, j + 1); }
+      }
+    }
+  }
+  return hits;
+};
+
+/* Genome-wide placement with UCSC BLAT (UCSC asks for at most one BLAT query every 15 s) */
+let lastBlat = 0;
+PS.blat = async function (q, signal, onWait) {
+  const wait = lastBlat + 15500 - Date.now();
+  lastBlat = Math.max(Date.now(), lastBlat + 15500);
+  if (wait > 0) {
+    if (onWait) onWait(Math.ceil(wait / 1000));
+    const until = Date.now() + wait;
+    while (Date.now() < until) { if (signal && signal.aborted) throw new Error('Cancelled'); await PS.sleep(Math.min(500, until - Date.now())); }
+  }
+  const d = await req(`https://genome.ucsc.edu/cgi-bin/hgBlat?userSeq=${q}&type=DNA&db=hg38&output=json`, { label: `UCSC BLAT (${q.length} nt)`, signal, retries: 1, timeout: 60000 });
+  const F = d.fields || [], rows = d.blat || [];
+  const ix = Object.fromEntries(F.map((f, i) => [f, i]));
+  const num = s => String(s).split(',').filter(x => x !== '').map(Number);
+  const out = [];
+  for (const row of rows) {
+    const g = k => row[ix[k]];
+    const tName = String(g('tName'));
+    const chr = normChr(tName.replace(/^chr/, ''));
+    if (!PS.CHR2ACC[chr] || tName.includes('_')) continue;   // primary chromosomes only
+    const n = +g('qSize'), strand = g('strand') === '-' ? -1 : 1;
+    const sizes = num(g('blockSizes')), qs = num(g('qStarts')), ts = num(g('tStarts'));
+    const qmap = new Array(n).fill(0);
+    sizes.forEach((sz, bi) => { for (let k = 0; k < sz; k++) { const qq = qs[bi] + k; const i = strand > 0 ? qq : n - 1 - qq; qmap[i] = ts[bi] + k + 1; } });
+    const score = +g('matches') + +g('repMatches') - +g('misMatches') - +g('qNumInsert') - +g('tNumInsert');
+    out.push({ chr, strand, g1: +g('tStart') + 1, g2: +g('tEnd'), qmap, score });
+  }
+  return out.sort((x, y) => y.score - x.score);
+};
+
+/* Mismatches and unaligned bases of a placed sequence, against the plus-strand reference of g1..g2 */
+PS.scoreHit = function (q, hit, gseq) {
+  const mm = [], gap = [];
+  for (let i = 0; i < q.length; i++) {
+    const g = hit.qmap[i];
+    if (!g) { gap.push(i); continue; }
+    const gb = gseq[g - hit.g1] || 'N';
+    const want = hit.strand > 0 ? q[i] : PS.revcomp(q[i]);
+    if (q[i] !== 'N' && gb !== want) mm.push(i);
+  }
+  hit.mm = mm; hit.gap = gap; hit.gseq = gseq; hit.bad = mm.length + gap.length;
+  return hit;
+};
+
+/* dbSNP (NCBI E-utilities): every rs record whose GRCh38 position falls in a:b, with its study frequencies.
+   The search starts 50 bp early so deletions that begin before the region and run into it are caught. */
+PS.DBSNP_STUDIES = /^(ALFA|GnomAD|GnomAD_genomes|GnomAD_exomes|TOPMED|1000Genomes|1000Genomes_30X|ExAC|GoESP|GoNL)$/;
+PS.dbsnpRegion = async function (chr, a, b, signal) {
+  const acc = PS.CHR2ACC[chr];
+  const term = `${chr}[CHR] AND ${Math.max(1, a - 50)}:${b}[CPOS]`;
+  const s = await req(`${PS.EUTILS}esearch.fcgi?db=snp&retmode=json&retmax=10000&tool=primerscope&term=${encodeURIComponent(term)}`, { label: `dbSNP search chr${chr}:${a}-${b}`, signal, ncbi: true });
+  const ids = (s.esearchresult && s.esearchresult.idlist) || [];
+  const total = +(s.esearchresult && s.esearchresult.count) || ids.length;
+  const recs = new Map();
+  for (let i = 0; i < ids.length; i += 200) {
+    const d = await req(`${PS.EUTILS}esummary.fcgi?db=snp&retmode=json&tool=primerscope&id=${ids.slice(i, i + 200).join(',')}`, { label: `dbSNP records ${i + 1}–${Math.min(ids.length, i + 200)}`, signal, ncbi: true, timeout: 60000 });
+    for (const uid of (d.result && d.result.uids) || []) {
+      const r = d.result[uid];
+      if (!r || r.error) continue;
+      const rs = 'rs' + (r.snp_id || uid);
+      if (recs.has(rs)) continue;
+      const sp = String(r.spdi || '').split(',').map(x => x.split(':')).filter(x => x.length >= 4 && x[0].split('.')[0] === acc.split('.')[0]);
+      if (!sp.length) continue;
+      let g1 = Infinity, g2 = -Infinity, ins = true;
+      for (const [, p0, del] of sp) {
+        const p = +p0;
+        if (del.length) { g1 = Math.min(g1, p + 1); g2 = Math.max(g2, p + del.length); ins = false; }
+        else { g1 = Math.min(g1, p); g2 = Math.max(g2, p + 1); }   // pure insertion between bases p and p+1
+      }
+      if (g2 < a || g1 > b) continue;
+      let best = null, bestSmall = null;
+      for (const m of (r.global_mafs || [])) {
+        const mm = /^([^=]*)=([\d.eE+-]+)\/(\d+)/.exec(m.freq || ''); if (!mm) continue;
+        const f = Math.min(1, +mm[2]); if (!(f > 0)) continue;
+        const rec = { allele: mm[1], f, study: m.study, n: +mm[3] };
+        if (PS.DBSNP_STUDIES.test(m.study)) { if (!best || f > best.f) best = rec; }
+        else if (!bestSmall || f > bestSmall.f) bestSmall = rec;
+      }
+      recs.set(rs, {
+        rs, g1, g2, ins, cls: r.snp_class || '', ref: sp[0][2] || '-', alts: [...new Set(sp.map(x => x[3] || '-'))],
+        maf: best ? best.f : null, mafStudy: best ? best.study : '', mafAllele: best ? best.allele : '',
+        smallMaf: bestSmall && (!best || bestSmall.f > best.f) ? bestSmall : null,
+        clin: String(r.clinical_significance || '').split(',').filter(Boolean), fxn: String(r.fxn_class || '').split(',').filter(Boolean)
+      });
+    }
+  }
+  return { variants: [...recs.values()], truncated: total > ids.length ? total : 0 };
+};
+
+/* Ensembl variation (dbSNP-derived) — used when NCBI dbSNP does not answer */
+PS.ensemblVarRegion = async function (chr, a, b, signal) {
+  const d = await req(`${PS.ENSEMBL}overlap/region/human/${chr}:${a}-${b}?feature=variation;content-type=application/json`, { label: `Ensembl variation chr${chr}:${a}-${b}`, signal, retries: 2, timeout: 30000 });
+  return { variants: d.map(x => {
+    const ins = x.start > x.end;
+    return { rs: x.id, g1: Math.min(x.start, x.end), g2: Math.max(x.start, x.end), ins, cls: '', ref: (x.alleles || [])[0] || '', alts: (x.alleles || []).slice(1), maf: null, mafStudy: '', clin: x.clinical_significance || [], fxn: x.consequence_type ? [x.consequence_type] : [], src: x.source || 'Ensembl' };
+  }) };
+};
+
+/* gnomAD v4 variants in a:b (reuses the design-tab query), with VCF anchor bases trimmed */
+PS.gnomadRegion = async function (chr, a, b, signal) {
+  const T = { wA: Math.max(1, a - 50), wB: b, g2t: g => g };
+  const r = await PS.gnomadWindow({ chr }, T, signal);
+  const out = [];
+  for (const x of r.variants) {
+    let g1 = x.pos, g2 = x.pos + x.ref.length - 1, ins = false;
+    if (x.ref.length !== x.alt.length && x.ref[0] === x.alt[0]) {
+      if (x.ref.length === 1) { g2 = x.pos + 1; ins = true; }   // insertion after the anchor base
+      else g1 = x.pos + 1;                                     // deletion: the anchor base itself is kept
+    }
+    if (g2 < a || g1 > b) continue;
+    out.push({ id: x.id, rs: x.rs, g1, g2, ins, ref: x.ref, alt: x.alt, af: x.af, maxPop: x.maxPop, maxPopName: x.maxPopName, score: x.score });
+  }
+  return { variants: out, note: r.note };
+};
+
+/* Merge dbSNP / Ensembl and gnomAD records (by rsID, else gnomAD id) */
+PS.mergeVariants = function (db, gn) {
+  const map = new Map();
+  for (const d of db || []) map.set(d.rs, { key: d.rs, rs: d.rs, g1: d.g1, g2: d.g2, ins: d.ins, db: d, gn: [] });
+  for (const g of gn || []) {
+    const k = g.rs && map.has(g.rs) ? g.rs : (g.rs || g.id);
+    if (!map.has(k)) map.set(k, { key: k, rs: g.rs || '', g1: g.g1, g2: g.g2, ins: g.ins, db: null, gn: [] });
+    const m = map.get(k); m.gn.push(g);
+    if (!m.db) { m.g1 = Math.min(m.g1, g.g1); m.g2 = Math.max(m.g2, g.g2); m.ins = m.ins && g.ins; }
+  }
+  for (const m of map.values()) {
+    const top = m.gn.slice().sort((x, y) => y.score - x.score)[0] || null;
+    m.gnTop = top;
+    const fr = [top ? top.score : null, m.db && m.db.maf != null ? m.db.maf : null].filter(x => x != null);
+    m.score = fr.length ? Math.max(...fr) : null;   // null: no frequency in either database
+  }
+  return [...map.values()];
+};
+
+/* Which primer bases each variant touches, and how risky it is.
+   thr is a fraction (0.001 = 0.1%). Within a primer, the last 5 bases at the 3′ end are the critical ones. */
+PS.annotateHit = function (q, hit, vars, thr) {
+  const n = q.length, primer = n <= PS.CHECK_PRIMER_LEN;
+  const byG = new Map(); hit.qmap.forEach((g, i) => { if (g) byG.set(g, i); });
+  const out = [];
+  for (const v of vars) {
+    let idx = [];
+    if (v.ins) {   // an insertion only changes the primer site if it falls between two primer bases
+      for (let g = v.g1; g < v.g2; g++) if (byG.has(g) && byG.has(g + 1)) idx.push(byG.get(g), byG.get(g + 1));
+    } else for (let g = v.g1; g <= v.g2; g++) if (byG.has(g)) idx.push(byG.get(g));
+    if (!idx.length) continue;
+    idx = [...new Set(idx)].sort((x, y) => x - y);
+    const from3 = n - 1 - idx[idx.length - 1];   // 0 = the 3′-terminal base
+    const known = v.score != null;
+    const level = known && v.score >= thr ? (primer && from3 <= 4 ? 'bad' : 'warn') : 'info';
+    out.push(Object.assign({}, v, { idx, from3, level }));
+  }
+  out.sort((x, y) => x.from3 - y.from3 || (y.score || 0) - (x.score || 0));
+  hit.vars = out;
+  hit.level = out.some(x => x.level === 'bad') ? 'bad' : out.some(x => x.level === 'warn') ? 'warn' : 'ok';
+  return hit;
+};
+
+/* Pairs among the placed sequences: same chromosome, facing each other, product <= maxLen */
+PS.findPairs = function (placed, maxLen = 5000) {
+  const out = [];
+  for (let i = 0; i < placed.length; i++) for (let j = 0; j < placed.length; j++) {
+    const f = placed[i], r = placed[j];
+    if (i === j || !f.hit || !r.hit || f.hit.chr !== r.hit.chr || f.hit.strand !== 1 || r.hit.strand !== -1) continue;
+    const len = r.hit.g2 - f.hit.g1 + 1;
+    if (len >= f.seq.length + r.seq.length - 10 && len <= maxLen) out.push({ f: i, r: j, chr: f.hit.chr, a: f.hit.g1, b: r.hit.g2, len });
+  }
+  return out.sort((x, y) => x.len - y.len);
+};
+
 root.PS = PS;
 if (typeof module !== 'undefined') module.exports = PS;
 })(typeof window !== 'undefined' ? window : globalThis);
@@ -1599,8 +1947,8 @@ const pct = x => x >= 0.01 ? (x * 100).toFixed(1) + '%' : x >= 0.0001 ? (x * 100
 
 /* ---------------- settings ---------------- */
 const KEYS = Object.keys(PS.DEFAULTS);
-let mode = 'sanger';   // 'sanger' or 'nested' (the tabs above the variant box)
-try { if (localStorage.getItem('primerscope.mode') === 'nested') mode = 'nested'; } catch (e) {}
+let mode = 'sanger';   // 'sanger', 'nested' or 'check' (the tabs above the variant box)
+try { const m = localStorage.getItem('primerscope.mode'); if (m === 'nested' || m === 'check') mode = m; } catch (e) {}
 function loadSettings() { let s = {}; try { s = JSON.parse(localStorage.getItem('primerscope.settings') || '{}') || {}; } catch (e) {} return Object.assign({}, PS.DEFAULTS, s); }
 function saveSettings() { try { localStorage.setItem('primerscope.settings', JSON.stringify(S)); } catch (e) {} }
 let S = loadSettings();
@@ -2356,6 +2704,7 @@ function renderDetail() {
         <button class="btn small" type="button" id="dlCsv">Download CSV</button>
         ${canCheck(p) ? `<button class="btn small" type="button" id="chkPB">Check ${q ? 'outer ' : ''}specificity</button>` : ''}
         ${q && canCheck(q) ? '<button class="btn small" type="button" id="chkPBin">Check inner specificity</button>' : ''}
+        <button class="btn small" type="button" id="ckPair" title="Check ${q ? 'all four primers' : 'both primers'} against dbSNP and gnomAD in the Check primers tab">Check SNPs</button>
         <button class="btn small" type="button" id="openPB">Open${q ? ' outer pair' : ''} in Primer-BLAST</button>
         <a class="btn small" target="_blank" rel="noopener" href="${esc(ucscPcrUrl(p))}" title="Run both primers against hg38 in UCSC In-Silico PCR: a quick second opinion on specificity">UCSC In-Silico PCR</a>
         <a class="btn small" target="_blank" rel="noopener" href="https://genome.ucsc.edu/cgi-bin/hgTracks?db=hg38&amp;position=chr${esc(v.chr)}%3A${a.gAmp[0]}-${a.gAmp[1]}" title="Open the amplicon in the UCSC Genome Browser (repeats, segmental duplications, SNPs)">UCSC browser</a>
@@ -2395,6 +2744,7 @@ function renderDetail() {
   $('cpAmp').onclick = () => copy(ampliconText(p), 'Amplicon');
   $('dlCsv').onclick = () => download(`${baseName(v)}_${nested() ? 'nested_' : ''}primers.csv`, csvAll(), 'text/csv');
   $('openPB').onclick = () => PS.pbOpenForm(PS.pbFields(state.T, state.job, pairSettings(p), { checkF: p.f, checkR: p.r }));
+  $('ckPair').onclick = () => checkFromPair(p);
   const chk = $('chkPB'); if (chk) chk.onclick = () => checkPairSpecificity(p);
   const chkIn = $('chkPBin'); if (chkIn) chkIn.onclick = () => checkPairSpecificity(q);
 }
@@ -2450,10 +2800,301 @@ function csvAll() {
   return `# PrimerScope${nested() ? ' nested PCR' : ''} · ${v.input} · ${v.gText} · ${new Date().toISOString().slice(0, 10)}\n` + rows.map(r => r.map(q).join(',')).join('\n') + '\n';
 }
 
+/* ---------------- Check primers: SNPs under user-supplied primers / sequences ---------------- */
+const CSTEPS = [['cparse', 'Parse'], ['clocate', 'Locate'], ['cdbsnp', 'dbSNP'], ['cgnomad', 'gnomAD v4']];
+function initCSteps() {
+  $('cpipe').innerHTML = CSTEPS.map(([k, l]) => `<div class="step" id="st_${k}" data-st="idle"><div class="k"><span class="dot"></span>${l}</div><div class="s" id="sts_${k}">Waiting</div></div>`).join('');
+}
+function cmsg(level, html, actions) {
+  const d = msg(level, html, actions); $('cmsgs').appendChild(d); return d;
+}
+let chk = null, chkCtl = null;
+const fmtAF = x => x == null ? '–' : x === 0 ? '0' : pct(x);
+const gLoc = h => `chr${h.chr}:${PS.nf(h.g1)}-${PS.nf(h.g2)}`;
+
+async function runCheck(opts = {}) {
+  readSettings();
+  $('cmsgs').innerHTML = '';
+  if (chkCtl) chkCtl.abort();
+  const ctl = new AbortController(); chkCtl = ctl;
+  const alive = () => chkCtl === ctl;
+  logLines = []; $('log').textContent = '';
+  initCSteps();
+  $('cintro').hidden = true; $('csummary').hidden = true; $('cresults').innerHTML = '';
+  const text = $('ckSeqs').value, locusText = opts.genomeWide ? '' : $('ckLocus').value.trim();
+  if (opts.genomeWide) $('ckLocus').value = '';
+  try { localStorage.setItem('primerscope.check', JSON.stringify({ text, locus: locusText })); } catch (e) {}
+  const thr = Math.max(0, S.snpAF) / 100;
+  let step = 'cparse';
+  const skipRest = (from, why) => CSTEPS.slice(CSTEPS.findIndex(x => x[0] === from)).forEach(([k]) => setStep(k, 'skip', why));
+  try {
+    const { seqs, errors } = PS.parseSeqs(text);
+    errors.forEach(e => cmsg('bad', esc(e)));
+    if (!seqs.length) {
+      setStep('cparse', 'fail', 'Nothing to check');
+      if (!errors.length) cmsg('bad', 'Paste at least one primer or sequence: one per line, optionally with a name before it, or FASTA.');
+      skipRest('clocate', 'Stopped'); return;
+    }
+    setStep('cparse', errors.length ? 'warn' : 'done', `${seqs.length} sequence${seqs.length > 1 ? 's' : ''}${errors.length ? `, ${errors.length} skipped` : ''}`);
+    chk = { seqs, thr, locus: null, pairs: [], date: new Date().toISOString().slice(0, 10) };
+
+    /* 1. place each sequence on GRCh38 */
+    step = 'clocate';
+    const regions = [];   // fetched plus-strand regions; later sequences are searched here first
+    if (locusText) {
+      setStep('clocate', 'run', 'Resolving locus…');
+      const L = await PS.resolveLocus(locusText, ctl.signal); if (!alive()) return;
+      setStep('clocate', 'run', 'Fetching locus sequence…');
+      const plus = await PS.fetchGenomic(L.acc, L.a, L.b, ctl.signal); if (!alive()) return;
+      chk.locus = L; regions.push(Object.assign({ plus, user: true }, L));
+      addLog(`Locus ${L.label}: searching chr${L.chr}:${L.a}-${L.b}`);
+    }
+    for (const [si, s] of seqs.entries()) {
+      s.hits = []; s.src = '';
+      for (const R of regions) {
+        const hs = PS.findInRegion(s.seq, R.plus, R.a);
+        if (!hs.length) continue;
+        hs.forEach(h => { h.chr = R.chr; PS.scoreHit(s.seq, h, R.plus.slice(h.g1 - R.a, h.g2 - R.a + 1)); });
+        s.hits = hs; s.src = R.user ? `near ${R.label}` : `near ${R.near}`; break;
+      }
+      if (!s.hits.length && locusText) { s.err = `Not found within ±5 kb of ${chk.locus.label}, even allowing ${s.seq.length <= 60 ? 'up to 2 mismatches' : 'about 3% mismatches'}.`; continue; }
+      if (!s.hits.length) {
+        if (s.seq.length < 20) { s.err = 'BLAT needs at least 20 nt. Give a gene, region or variant in Near to place shorter primers.'; continue; }
+        setStep('clocate', 'run', `BLAT ${s.name} (${si + 1}/${seqs.length})…`);
+        let bh;
+        try { bh = await PS.blat(s.seq, ctl.signal, sec => setStep('clocate', 'run', `BLAT ${s.name}: waiting ${sec} s (UCSC limit)`)); }
+        catch (e) { if (e.message === 'Cancelled' || !alive()) return; s.err = `UCSC BLAT failed (${e.message}). Give a gene, region or variant in Near to search there instead.`; addLog(s.err); continue; }
+        if (!alive()) return;
+        const n = s.seq.length, aligned = h => h.qmap.filter(Boolean).length;
+        bh = bh.filter(h => aligned(h) >= 0.9 * n);
+        if (!bh.length) { s.err = 'UCSC BLAT found no placement on the GRCh38 primary chromosomes.'; continue; }
+        const top = bh[0].score;
+        s.blatCount = bh.length;
+        s.hits = bh.filter(h => h.score >= top - 2).slice(0, 5);
+        for (const h of s.hits) {
+          const gseq = await PS.fetchGenomic(PS.CHR2ACC[h.chr], h.g1, h.g2, ctl.signal); if (!alive()) return;
+          PS.scoreHit(s.seq, h, gseq);
+        }
+        s.src = 'UCSC BLAT, genome-wide';
+        // fetch ±10 kb around the best hit so the partner primer is found without another BLAT search
+        const b = s.hits[0];
+        try {
+          const A = Math.max(1, b.g1 - 10000), B = b.g2 + 10000;
+          const plus = await PS.fetchGenomic(PS.CHR2ACC[b.chr], A, B, ctl.signal); if (!alive()) return;
+          regions.push({ chr: b.chr, a: A, b: B, plus, near: `${s.name} (±10 kb)` });
+        } catch (e) { addLog(`Could not fetch the region around ${s.name}: ${e.message}`); }
+      }
+      s.hits.sort((x, y) => x.bad - y.bad || x.g1 - y.g1);
+      const best = s.hits[0].bad;
+      s.checked = s.hits.filter(h => h.bad === best).slice(0, 3);
+      s.others = s.hits.length - s.checked.length;
+      s.hit = s.checked[0];
+    }
+    const placed = seqs.filter(s => s.hit).length;
+    setStep('clocate', placed === seqs.length ? 'done' : placed ? 'warn' : 'fail', `${placed} of ${seqs.length} placed`);
+    chk.pairs = PS.findPairs(seqs.map(s => ({ seq: s.seq, hit: s.hit })));
+    if (!placed) {
+      cmsg('bad', `No sequence could be placed on GRCh38.${locusText ? ' Check the locus, or search the whole genome.' : ''}`, locusText ? [{ label: 'Search genome-wide', fn: () => runCheck({ genomeWide: true }) }] : null);
+      renderCheck(); skipRest('cdbsnp', 'Nothing placed'); return;
+    }
+    if (locusText && placed < seqs.length) cmsg('warn', `${seqs.length - placed} sequence${seqs.length - placed > 1 ? 's were' : ' was'} not found near ${esc(chk.locus.label)}.`, [{ label: 'Search genome-wide', fn: () => runCheck({ genomeWide: true }) }]);
+    renderCheck();
+
+    /* 2. dbSNP and gnomAD under each placement */
+    step = 'cdbsnp';
+    const work = seqs.flatMap(s => (s.checked || []).map(h => ({ s, h })));
+    let nDb = 0, nGn = 0, dbFail = 0, gnFail = 0, ensUsed = 0, trunc = 0;
+    setStep('cdbsnp', 'run', 'Querying NCBI…'); setStep('cgnomad', 'run', 'Querying gnomAD…');
+    for (const [wi, { s, h }] of work.entries()) {
+      setStep('cdbsnp', 'run', `${s.name} (${wi + 1}/${work.length})…`);
+      const [db, gn] = await Promise.allSettled([PS.dbsnpRegion(h.chr, h.g1, h.g2, ctl.signal), h.chr === 'MT' ? Promise.resolve({ variants: [] }) : PS.gnomadRegion(h.chr, h.g1, h.g2, ctl.signal)]);
+      if (!alive()) return;
+      let dbv = null;
+      if (db.status === 'fulfilled') { dbv = db.value.variants; h.dbSrc = 'dbSNP'; if (db.value.truncated) trunc++; }
+      else {
+        addLog(`dbSNP failed for ${s.name} (${db.reason && db.reason.message}); trying Ensembl`);
+        try { dbv = (await PS.ensemblVarRegion(h.chr, h.g1, h.g2, ctl.signal)).variants; h.dbSrc = 'Ensembl'; ensUsed++; }
+        catch (e) { dbFail++; h.dbSrc = ''; addLog(`Ensembl variation failed for ${s.name}: ${e.message}`); }
+        if (!alive()) return;
+      }
+      const gnv = gn.status === 'fulfilled' ? gn.value.variants : null;
+      if (!gnv) { gnFail++; addLog(`gnomAD failed for ${s.name}: ${gn.reason && gn.reason.message}`); }
+      h.gnOk = !!gnv;
+      nDb += dbv ? dbv.length : 0; nGn += gnv ? gnv.length : 0;
+      h.screened = !!(dbv || gnv);
+      PS.annotateHit(s.seq, h, PS.mergeVariants(dbv || [], gnv || []), thr);
+      renderCheck();
+    }
+    setStep('cdbsnp', dbFail ? (dbFail === work.length ? 'fail' : 'warn') : ensUsed ? 'warn' : 'done', dbFail === work.length ? 'Unavailable' : `${PS.nf(nDb)} record${nDb === 1 ? '' : 's'}${ensUsed ? ' (Ensembl)' : ''}`);
+    setStep('cgnomad', gnFail ? (gnFail === work.length ? 'fail' : 'warn') : 'done', gnFail === work.length ? 'Unavailable' : `${PS.nf(nGn)} variant${nGn === 1 ? '' : 's'}`);
+    if (ensUsed) cmsg('warn', 'NCBI dbSNP did not answer for some sequences, so Ensembl Variation was used instead. It lists the same dbSNP records but without frequencies; the gnomAD frequencies still apply.');
+    if (dbFail && gnFail) cmsg('bad', 'Some sequences could not be screened: dbSNP, Ensembl and gnomAD all failed for them. Try again in a minute.');
+    else if (gnFail) cmsg('warn', `gnomAD did not answer for ${gnFail} placement${gnFail > 1 ? 's' : ''}; their flags rest on dbSNP frequencies only.`);
+    if (trunc) cmsg('warn', 'Over 10,000 dbSNP records fall under a long sequence; only the first 10,000 were read.');
+    if (seqs.some(s => s.others || (s.checked && s.checked.length > 1))) cmsg('info', 'Some sequences match more than one place equally well. Each equal placement was screened; check specificity before ordering.');
+  } catch (e) {
+    if (e.message === 'Cancelled' || !alive()) return;
+    setStep(step, 'fail', 'Failed');
+    cmsg('bad', esc(e.message));
+    addLog('Error: ' + e.message);
+  }
+}
+
+function hitPill(s, h) {
+  if (!h) return '<span class="pill idle">Not placed</span>';
+  if (!h.vars) return h.screened === false ? '<span class="pill idle">Not screened</span>' : '<span class="pill run"><span class="spin"></span> Checking</span>';
+  const thrT = S.snpAF + '%';
+  const big = h.vars.filter(x => x.level !== 'info');
+  if (h.level === 'bad') return `<span class="pill bad" title="A variant at or above ${thrT} sits in the last 5 bases at the 3′ end">SNP at 3′ end</span>`;
+  if (h.level === 'warn') return `<span class="pill warn">${big.length} SNP${big.length > 1 ? 's' : ''} ≥ ${thrT}</span>`;
+  return `<span class="pill ok">No SNP ≥ ${thrT}</span>`;
+}
+function baseRef(x, n) {
+  const a = x.idx[0] + 1, b = x.idx[x.idx.length - 1] + 1;
+  const pos = a === b ? `${a}` : `${a}–${b}`;
+  return `${pos}/${n} · ${x.from3 === 0 ? '3′ base' : x.from3 + ' from 3′'}`;
+}
+function varChange(x) {
+  if (x.db) return `${esc(x.db.ref || '-')}&gt;${esc(x.db.alts.join('/'))}`;
+  const g = x.gnTop; return g ? `${esc(g.ref)}&gt;${esc(g.alt)}` : '';
+}
+function varRow(x, n) {
+  const db = x.db, g = x.gnTop;
+  const id = x.rs ? `<a href="https://www.ncbi.nlm.nih.gov/snp/${esc(x.rs)}" target="_blank" rel="noopener">${esc(x.rs)}</a>` : '';
+  const gid = g ? `<a href="https://gnomad.broadinstitute.org/variant/${esc(g.id)}?dataset=gnomad_r4" target="_blank" rel="noopener" class="muted">${esc(g.id)}</a>` : '';
+  const ext = x.g2 - x.g1 + 1 > 50 ? ` <span class="muted">(${PS.nf(x.g2 - x.g1 + 1)} bp)</span>` : '';
+  const dbf = db ? (db.maf != null ? `${fmtAF(db.maf)} <span class="muted">${esc(db.mafStudy)}</span>` : db.smallMaf ? `<span class="muted" title="Only small studies report a frequency; not used for the flag">${fmtAF(db.smallMaf.f)} ${esc(db.smallMaf.study)}</span>` : '<span class="muted">no frequency</span>') : '<span class="muted">not in dbSNP</span>';
+  const gnf = g ? `${fmtAF(g.af)}${g.maxPop > g.af ? ` <span class="muted">· ${fmtAF(g.maxPop)} ${esc(g.maxPopName)}</span>` : ''}` : '<span class="muted">–</span>';
+  const ann = db ? [db.cls, db.clin.length ? 'ClinVar: ' + db.clin.slice(0, 3).join(', ') : ''].filter(Boolean).join(' · ') : '';
+  return `<tr><td class="lvl-${x.level}">${id}${id && gid ? '<br>' : ''}${gid}${ext}</td><td class="num" style="white-space:nowrap">${baseRef(x, n)}</td><td class="mono" style="font-size:12.5px;max-width:160px;overflow-wrap:anywhere">${varChange(x)}</td><td>${dbf}</td><td>${gnf}</td><td style="font-size:12.5px">${esc(ann)}</td></tr>`;
+}
+function seqHTML(s, h) {
+  const n = s.seq.length, primer = n <= PS.CHECK_PRIMER_LEN;
+  const lv = new Array(n).fill(null), tip = new Array(n).fill('');
+  const rank = { bad: 3, warn: 2, info: 1 };
+  if (h && h.vars) for (const x of h.vars) for (const i of x.idx) {
+    if (!lv[i] || rank[x.level] > rank[lv[i]]) lv[i] = x.level;
+    const f = x.score == null ? 'frequency unknown' : fmtAF(x.score);
+    tip[i] += (tip[i] ? '; ' : '') + `${x.rs || (x.gnTop && x.gnTop.id) || 'variant'} ${f}`;
+  }
+  const mm = new Set(h ? h.mm : []), gap = new Set(h ? h.gap : []);
+  let out = '<span class="end">5′ </span>';
+  for (let i = 0; i < n; i++) {
+    const cls = [lv[i] === 'bad' ? 'vb' : lv[i] === 'warn' ? 'vw' : lv[i] === 'info' ? 'vi' : '', mm.has(i) ? 'mm' : '', gap.has(i) ? 'gap' : '', primer && i >= n - 5 ? 'k3' : ''].filter(Boolean).join(' ');
+    let t = tip[i];
+    if (mm.has(i)) { const g = h.qmap[i]; const gb = h.gseq[g - h.g1]; t = `Genome has ${h.strand > 0 ? gb : PS.revcomp(gb)} here` + (t ? '; ' + t : ''); }
+    if (gap.has(i)) t = 'Not aligned by BLAT' + (t ? '; ' + t : '');
+    out += cls || t ? `<span${cls ? ` class="${cls}"` : ''}${t ? ` title="Base ${i + 1}: ${esc(t)}"` : ''}>${s.seq[i]}</span>` : s.seq[i];
+  }
+  return out + '<span class="end"> 3′</span>';
+}
+function hitBlock(s, h, k) {
+  const n = s.seq.length, primer = n <= PS.CHECK_PRIMER_LEN;
+  const match = h.bad === 0 ? 'Exact match' : [h.mm.length ? `${h.mm.length} mismatch${h.mm.length > 1 ? 'es' : ''} (base ${h.mm.map(i => i + 1).join(', ')})` : '', h.gap.length ? `${h.gap.length} base${h.gap.length > 1 ? 's' : ''} unaligned` : ''].filter(Boolean).join(', ');
+  const vars = h.vars || [];
+  const main = vars.filter(x => x.level !== 'info' || (primer && x.from3 <= 4 && x.score != null && x.score >= 1e-4));
+  const rest = vars.filter(x => !main.includes(x));
+  const head = '<thead><tr><th>Variant</th><th>Primer base</th><th>Change (+ strand)</th><th>dbSNP MAF</th><th>gnomAD v4 · max population</th><th>Class · ClinVar</th></tr></thead>';
+  const src = [h.dbSrc === 'Ensembl' ? 'Ensembl Variation (dbSNP, no frequencies)' : h.dbSrc ? 'dbSNP' : '', h.gnOk ? 'gnomAD v4' : ''].filter(Boolean).join(' + ');
+  let table = '';
+  if (h.vars) {
+    if (!vars.length) table = `<p class="muted" style="margin:6px 0 0">No ${esc(src || 'database')} variant under this ${primer ? 'primer' : 'sequence'}.</p>`;
+    else {
+      table = main.length ? `<div class="tbl"><table>${head}<tbody>${main.map(x => varRow(x, n)).join('')}</tbody></table></div>` : `<p class="muted" style="margin:6px 0 0">No variant at or above ${S.snpAF}%${primer ? ', and none above 0.01% in the last 5 bases' : ''}.</p>`;
+      if (rest.length) table += `<details class="more"${!main.length && rest.length <= 8 ? ' open' : ''}><summary>${rest.length} rarer or frequency-unknown variant${rest.length > 1 ? 's' : ''}</summary><div class="tbl"><table>${head}<tbody>${rest.map(x => varRow(x, n)).join('')}</tbody></table></div></details>`;
+    }
+  }
+  const chrom = h.chr === 'MT' ? 'chrM' : 'chr' + h.chr;
+  return `${k ? '<hr style="border:0;border-top:1px solid var(--line);margin:14px 0">' : ''}
+    <div class="ckmeta">
+      <span><b>${gLoc(h)}</b> (${h.strand > 0 ? '+' : '−'} strand)</span>
+      <span>${esc(match)}</span>
+      ${k === 0 && s.src ? `<span class="muted">${esc(s.src)}</span>` : ''}
+      ${src ? `<span class="muted">Screened: ${esc(src)}</span>` : ''}
+    </div>
+    ${s.checked.length > 1 ? `<p class="label" style="margin:4px 0">Placement ${k + 1} of ${s.checked.length} ${hitPill(s, h)}</p>` : ''}
+    <div class="ckseq${primer ? '' : ' long'}">${seqHTML(s, h)}</div>
+    ${table}
+    <div class="row" style="margin-top:10px">
+      <a class="btn small" target="_blank" rel="noopener" href="https://genome.ucsc.edu/cgi-bin/hgTracks?db=hg38&amp;position=${chrom}%3A${h.g1}-${h.g2}&amp;highlight=hg38.${chrom}%3A${h.g1}-${h.g2}">UCSC browser</a>
+      <a class="btn small" target="_blank" rel="noopener" href="https://www.ncbi.nlm.nih.gov/snp/?term=${encodeURIComponent(`${h.chr}[CHR] AND ${h.g1}:${h.g2}[CPOS]`)}">dbSNP</a>
+      ${h.chr !== 'MT' ? `<a class="btn small" target="_blank" rel="noopener" href="https://gnomad.broadinstitute.org/region/${h.chr}-${h.g1}-${h.g2}?dataset=gnomad_r4">gnomAD region</a>` : ''}
+    </div>`;
+}
+function renderCheck() {
+  if (!chk) return;
+  const { seqs, pairs } = chk;
+  const row = s => {
+    const h = s.hit, n = s.seq.length;
+    const big = h && h.vars ? h.vars.filter(x => x.level !== 'info').length : null;
+    return `<tr><td><a href="#ck_${seqs.indexOf(s)}">${esc(s.name)}</a></td><td class="num">${n}</td><td>${h ? `${gLoc(h)} ${h.strand > 0 ? '+' : '−'}` : `<span class="muted">${esc(s.err || 'not placed')}</span>`}</td><td>${h ? (h.bad ? `${h.bad} mm` : 'exact') + (s.checked.length > 1 || s.others ? ` <span class="muted">· ${s.checked.length + s.others} sites</span>` : '') : ''}</td><td class="num">${big == null ? '' : big}</td><td>${s.checked ? s.checked.map(x => hitPill(s, x)).join(' ') : hitPill(s, null)}</td></tr>`;
+  };
+  $('csummary').hidden = false;
+  $('csummary').innerHTML = `
+    <div class="ckhead"><h2>Summary</h2><div class="row">
+      <button type="button" class="btn small" id="ckCsv">Download CSV</button>
+      <button type="button" class="btn small" id="ckCopy">Copy report</button>
+    </div></div>
+    <div class="tbl"><table><thead><tr><th>Name</th><th>nt</th><th>GRCh38 location</th><th>Match</th><th>SNPs ≥ ${S.snpAF}%</th><th>Result</th></tr></thead><tbody>${seqs.map(row).join('')}</tbody></table></div>
+    ${pairs.length ? `<p style="margin:10px 0 0">${pairs.map(p => `<b>${esc(seqs[p.f].name)}</b> + <b>${esc(seqs[p.r].name)}</b> face each other: <b>${PS.nf(p.len)} bp</b> product at chr${p.chr}:${PS.nf(p.a)}-${PS.nf(p.b)}`).join('<br>')}</p>` : ''}`;
+  $('ckCsv').onclick = () => download(`primerscope_snpcheck_${chk.date}.csv`, checkCsv(), 'text/csv');
+  $('ckCopy').onclick = () => copy(checkText(), 'Report');
+  $('cresults').innerHTML = seqs.map((s, i) => `
+    <section class="panel" id="ck_${i}">
+      <div class="ckhead"><h2>${esc(s.name)} <span class="muted" style="font-weight:500;font-size:14px">${s.seq.length} nt</span></h2>${s.checked && s.checked.length === 1 ? hitPill(s, s.hit) : !s.hit ? hitPill(s, null) : ''}</div>
+      ${s.notes.map(t => `<div class="msg info" style="margin-bottom:8px">${esc(t)}</div>`).join('')}
+      ${s.hit ? s.checked.map((h, k) => hitBlock(s, h, k)).join('') + (s.others ? `<p class="muted" style="margin:8px 0 0">Also matches ${s.others} other site${s.others > 1 ? 's' : ''} with more mismatches${s.blatCount ? ' (UCSC BLAT)' : ''}, not screened.</p>` : '') : `<div class="ckseq">${seqHTML(s, null)}</div><div class="msg warn" style="margin-top:8px">${esc(s.err || 'Not placed.')}</div>`}
+    </section>`).join('');
+}
+function checkRows() {
+  const rows = [];
+  for (const s of chk.seqs) {
+    if (!s.hit) { rows.push({ s, h: null, x: null }); continue; }
+    for (const h of s.checked) { if (!h.vars || !h.vars.length) rows.push({ s, h, x: null }); else h.vars.forEach(x => rows.push({ s, h, x })); }
+  }
+  return rows;
+}
+function checkCsv() {
+  const q = x => { x = String(x == null ? '' : x); return /[",\n]/.test(x) ? `"${x.replace(/"/g, '""')}"` : x; };
+  const head = ['name', 'sequence', 'length', 'location', 'strand', 'mismatches', 'result', 'variant', 'gnomad_id', 'primer_base', 'bases_from_3prime', 'change_plus_strand', 'dbsnp_maf', 'dbsnp_study', 'gnomad_af', 'gnomad_max_pop_af', 'gnomad_max_pop', 'class', 'clinvar', 'level'];
+  const out = checkRows().map(({ s, h, x }) => {
+    const res = !h ? (s.err || 'not placed') : h.level === 'bad' ? 'SNP at 3prime end' : h.level === 'warn' ? 'SNP' : h.vars ? 'no SNP above threshold' : 'not screened';
+    const base = [s.name, s.seq, s.seq.length, h ? `chr${h.chr}:${h.g1}-${h.g2}` : '', h ? (h.strand > 0 ? '+' : '-') : '', h ? h.bad : '', res];
+    if (!x) return base.concat(new Array(head.length - base.length).fill(''));
+    const db = x.db, g = x.gnTop;
+    return base.concat([x.rs, g ? g.id : '', x.idx.map(i => i + 1).join('-'), x.from3, varChange(x).replace(/&gt;/g, '>'), db && db.maf != null ? db.maf : '', db ? db.mafStudy : '', g ? g.af : '', g ? g.maxPop : '', g ? g.maxPopName : '', db ? db.cls : '', db ? db.clin.join('; ') : '', x.level]);
+  });
+  return `# PrimerScope SNP check · threshold ${S.snpAF}% · ${chk.date}${chk.locus ? ' · near ' + chk.locus.label : ''}\n` + [head].concat(out).map(r => r.map(q).join(',')).join('\n') + '\n';
+}
+function checkText() {
+  const L = [`PrimerScope SNP check (GRCh38, dbSNP + gnomAD v4), flag at AF >= ${S.snpAF}%, ${chk.date}`];
+  for (const s of chk.seqs) {
+    if (!s.hit) { L.push(`${s.name} ${s.seq}: ${s.err || 'not placed'}`); continue; }
+    for (const h of s.checked) {
+      const big = (h.vars || []).filter(x => x.level !== 'info');
+      L.push(`${s.name} ${s.seq} @ chr${h.chr}:${h.g1}-${h.g2} (${h.strand > 0 ? '+' : '-'})${h.bad ? `, ${h.bad} mismatch(es)` : ''}: ${!h.vars ? 'not screened' : big.length ? big.map(x => `${x.rs || x.gnTop.id} ${fmtAF(x.score)} at ${x.from3 === 0 ? "3' base" : x.from3 + " from 3'"}`).join('; ') : 'no SNP above threshold'}`);
+    }
+  }
+  for (const p of chk.pairs) L.push(`Pair ${chk.seqs[p.f].name} + ${chk.seqs[p.r].name}: ${p.len} bp at chr${p.chr}:${p.a}-${p.b}`);
+  return L.join('\n');
+}
+/* from a designed pair: open the Check tab with its primers filled in */
+function checkFromPair(p) {
+  const q = innerOf(p), v = state.v, lines = [];
+  for (const pp of [p, q].filter(Boolean)) { const nm = primerNames(pp.role); lines.push(`${nm.f}  ${pp.f}`, `${nm.r}  ${pp.r}`); }
+  $('ckSeqs').value = lines.join('\n');
+  $('ckLocus').value = p.a && p.a.found ? `chr${v.chr}:${p.a.gAmp[0]}-${p.a.gAmp[1]}` : v.input;
+  setMode('check');
+  runCheck();
+}
+
 /* ---------------- boot ---------------- */
 fillSettings(); initSteps();
 try { const last = localStorage.getItem('primerscope.last'); if (last) $('vinput').value = last; } catch (e) {}
-$('vform').addEventListener('submit', e => { e.preventDefault(); run(false); });
+try { const c = JSON.parse(localStorage.getItem('primerscope.check') || 'null'); if (c) { $('ckSeqs').value = c.text || ''; $('ckLocus').value = c.locus || ''; } } catch (e) {}
+initCSteps();
+$('vform').addEventListener('submit', e => { e.preventDefault(); if (mode === 'check') runCheck(); else run(false); });
+$('ckExamples').querySelectorAll('.chip').forEach(c => c.onclick = () => { $('ckSeqs').value = c.dataset.seqs; $('ckLocus').value = c.dataset.locus; runCheck(); });
 $('examples').querySelectorAll('.chip').forEach(c => c.onclick = () => { $('vinput').value = c.textContent; run(false); });
 $('resetSettings').onclick = () => { S = Object.assign({}, PS.DEFAULTS); saveSettings(); fillSettings(); toast('Defaults restored'); };
 function syncThemeBtn() { const dark = document.documentElement.dataset.theme !== 'light'; $('themeBtn').textContent = dark ? '☀ Light mode' : '☾ Dark mode'; }
@@ -2465,18 +3106,24 @@ $('themeBtn').onclick = () => {
 };
 syncThemeBtn();
 function syncMode() {
+  const check = mode === 'check';
   $('modeTabs').querySelectorAll('.tab').forEach(b => b.setAttribute('aria-selected', String(b.dataset.mode === mode)));
+  document.querySelectorAll('#vform [data-for]').forEach(el => el.hidden = (el.dataset.for === 'check') !== check);
   $('nestBox').hidden = mode !== 'nested';
+  $('designView').hidden = check; $('checkView').hidden = !check;
+  $('ckThr').textContent = S.snpAF + '%';
   $('ampLabel').textContent = mode === 'nested' ? 'Inner amplicon (sequenced)' : 'Amplicon size';
-  $('go').textContent = mode === 'nested' ? 'Design nested primers' : 'Design primers';
+  $('go').textContent = check ? 'Check for SNPs' : mode === 'nested' ? 'Design nested primers' : 'Design primers';
   if (!state) initSteps();   // step labels follow the mode until a design is on screen
 }
-$('modeTabs').querySelectorAll('.tab').forEach(b => b.onclick = () => {
-  if (mode === b.dataset.mode) return;
-  mode = b.dataset.mode; try { localStorage.setItem('primerscope.mode', mode); } catch (e) {}
+function setMode(m) {
+  if (mode === m) return;
+  const was = mode;
+  mode = m; try { localStorage.setItem('primerscope.mode', mode); } catch (e) {}
   syncMode();
-  if (state && state.T) toast(`${mode === 'nested' ? 'Nested PCR' : 'Sanger'} mode; press ${$('go').textContent} to apply`);
-});
+  if (m !== 'check' && was !== 'check' && state && state.T) toast(`${mode === 'nested' ? 'Nested PCR' : 'Sanger'} mode; press ${$('go').textContent} to apply`);
+}
+$('modeTabs').querySelectorAll('.tab').forEach(b => b.onclick = () => setMode(b.dataset.mode));
 syncMode();
 $('outerPresets').querySelectorAll('.chip').forEach(c => c.onclick = () => { $('s_outerMin').value = c.dataset.min; $('s_outerMax').value = c.dataset.max; readSettings(); toast(`Outer amplicon ${c.dataset.min}–${c.dataset.max} bp; press ${$('go').textContent} to apply`); });
 $('ampPresets').querySelectorAll('.chip').forEach(c => c.onclick = () => { $('s_ampMin').value = c.dataset.min; $('s_ampMax').value = c.dataset.max; readSettings(); toast(`${mode === 'nested' ? 'Inner amplicon' : 'Amplicon'} ${c.dataset.min}–${c.dataset.max} bp; press ${$('go').textContent} to apply`); });
@@ -2489,7 +3136,7 @@ function openFaq(id) {
 document.addEventListener('click', e => { const b = e.target.closest('[data-faq]'); if (b) { e.preventDefault(); e.stopPropagation(); openFaq(b.dataset.faq); } }, true);
 $('faqClose').onclick = () => $('faq').close();
 $('faq').addEventListener('click', e => { if (e.target === $('faq')) $('faq').close(); });
-document.querySelectorAll('#settingsBox input, #settingsBox select, #s_ampMin, #s_ampMax, #nestBox input').forEach(el => el.addEventListener('change', () => { const p = readSettings(); if (!p.length && state && state.T && el.id === 's_m13') renderDetail(); }));
+document.querySelectorAll('#settingsBox input, #settingsBox select, #s_ampMin, #s_ampMax, #nestBox input').forEach(el => el.addEventListener('change', () => { const p = readSettings(); $('ckThr').textContent = S.snpAF + '%'; if (!p.length && state && state.T && el.id === 's_m13') renderDetail(); }));
 })();
 
 </script>
