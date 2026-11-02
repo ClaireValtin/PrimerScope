@@ -3000,7 +3000,9 @@ function hitBlock(s, h, k) {
   if (h.vars) {
     if (!vars.length) table = `<p class="muted" style="margin:6px 0 0">No ${esc(src || 'database')} variant under this ${primer ? 'primer' : 'sequence'}.</p>`;
     else {
-      table = main.length ? `<div class="tbl"><table>${head}<tbody>${main.map(x => varRow(x, n)).join('')}</tbody></table></div>` : `<p class="muted" style="margin:6px 0 0">No variant at or above ${S.snpAF}%${primer ? ', and none above 0.01% in the last 5 bases' : ''}.</p>`;
+      const near3 = main.filter(x => x.level === 'info').length, flagged = main.length - near3;
+      const why = near3 ? `<p class="muted" style="margin:6px 0">${flagged ? `${flagged} variant${flagged > 1 ? 's are' : ' is'} at or above ${S.snpAF}% (coloured edge). ` : `No variant at or above ${S.snpAF}%. `}${near3 === 1 ? 'The row with a grey edge is' : `The ${near3} rows with a grey edge are`} below the threshold but in the last 5 bases at the 3′ end, where even a rare variant can block extension in a carrier, so ${near3 === 1 ? 'it is' : 'they are'} listed for information, not flagged.</p>` : '';
+      table = main.length ? `${why}<div class="tbl"><table>${head}<tbody>${main.map(x => varRow(x, n)).join('')}</tbody></table></div>` : `<p class="muted" style="margin:6px 0 0">No variant at or above ${S.snpAF}%${primer ? ', and none above 0.01% in the last 5 bases' : ''}.</p>`;
       if (rest.length) table += `<details class="more"${!main.length && rest.length <= 8 ? ' open' : ''}><summary>${rest.length} rarer or frequency-unknown variant${rest.length > 1 ? 's' : ''}</summary><div class="tbl"><table>${head}<tbody>${rest.map(x => varRow(x, n)).join('')}</tbody></table></div></details>`;
     }
   }
